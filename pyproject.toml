@@ -1,0 +1,15 @@
+[project]
+name = "quantforge"
+version = "0.1.0"
+description = "AI-driven, polyglot quant research pipeline (independent open-source project)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools.packages.find]
+where = ["src"]

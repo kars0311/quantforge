@@ -1,0 +1,12 @@
+{
+  // VS Code prompts anyone who clones this repo to install these
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "reditorsupport.r",
+    "eamodio.gitlens",
+    "tamasfe.even-better-toml",
+    "anthropic.claude-code"
+  ]
+}

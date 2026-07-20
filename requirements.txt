@@ -1,0 +1,23 @@
+# Core
+numpy
+pandas
+pyarrow            # Arrow/Parquet interchange contract (the polyglot backbone)
+yfinance           # data (note: unofficial; handle survivorship/look-ahead bias explicitly)
+
+# Backtest / portfolio
+backtesting        # used to VALIDATE the custom engine (correctness cross-check)
+PyPortfolioOpt     # mean-variance optimization, efficient frontier
+# vectorbt         # optional: fast parameter sweeps (stretch)
+
+# UI
+streamlit
+plotly
+
+# AI layer (Anthropic Claude API)
+anthropic          # use prompt caching + model tiering (Haiku/Sonnet)
+mcp                # Model Context Protocol server/tools
+
+# Dev / test
+pytest
+ruff               # lint (matches CI)
+python-dotenv

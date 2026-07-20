@@ -1,0 +1,44 @@
+# ── Environment / secrets (NEVER commit — holds the Anthropic API key) ──
+.env
+.env.local
+.env.*.local
+
+# ── Python ──
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# ── R ──
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# ── Data / pipeline outputs ──
+data/raw/
+data/processed/
+output/
+*.parquet
+!tests/fixtures/*.parquet
+
+# ── Streamlit ──
+.streamlit/secrets.toml
+
+# ── OS junk ──
+.DS_Store
+Thumbs.db
+
+# ── IDE (settings.json + extensions.json ARE committed on purpose) ──
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+
+# ── Local-only docs (personal/internal — keep out of the public repo) ──
+SETUP_BRIEFING.md
+docs/AE_PITCH_ONEPAGER.md
