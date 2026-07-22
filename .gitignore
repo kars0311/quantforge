@@ -39,6 +39,9 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 
+# ── Claude Code local settings (personal permissions — workflows/ IS committed) ──
+.claude/settings.local.json
+
 # ── Local-only docs (personal/internal — keep out of the public repo) ──
 SETUP_BRIEFING.md
 docs/AE_PITCH_ONEPAGER.md

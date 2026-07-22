@@ -68,6 +68,14 @@ Use the **`claude-api` skill**. Turn on **prompt caching** (cache the system pro
 price data). Use Haiku for NL parsing and Sonnet for agent reasoning; Opus only if clearly needed.
 Every model call: estimate → `budget.allow()` → call → `budget.charge()`.
 
+## Status handoff (keep current)
+
+`handoff.md` at the repo root is the living project-status doc. **After every workflow run the
+user executes completes, update it** — prepend a dated entry with: what was built/changed, test
+suite status (ruff + pytest counts), any agent failures and how they were resolved, open items,
+and the next build target. Newest entry first. This is the first thing a fresh session should
+read to pick up where the last one left off.
+
 ## Run / test
 
 ```bash
