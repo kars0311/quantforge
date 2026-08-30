@@ -14,8 +14,8 @@ interchange-guard test, and the workflow verifiers' proving suites
 `test_mean_reversion_verifier.py` / `test_strategy_registry_verifier.py` /
 `test_strategies_week4_verifier.py` / `test_interface_freeze_verifier.py`; the 2 skips are the
 unchanged wk 8–9 stubs). Both Week 4
-boxes in `docs/TEN_WEEK_PLAN.md` are ticked. All work is **uncommitted** pending Kent's
-approval.
+boxes in `docs/TEN_WEEK_PLAN.md` are ticked. Committed 2026-08-30 (`35453b6`, "week 4
+complete") with Kent's approval and pushed.
 
 ### What was built this run
 
@@ -51,7 +51,7 @@ approval.
 
 1. Deferred to week 6 (before schema freeze): R-side Parquet read check
    (`Rscript -e 'arrow::read_parquet(...)'` on a written prices file).
-2. Commit Week 4 once Kent approves — nothing from this run is committed.
+2. Resolved 2026-08-30: Week 4 committed as `35453b6` and pushed.
 
 **Next up (per docs/TEN_WEEK_PLAN.md):** Week 5 — portfolio layer (`portfolio/optimize.py`,
 PyPortfolioOpt mean-variance + efficient frontier, strategy combination) + Streamlit UI shell.
