@@ -98,11 +98,6 @@ def test_handoff_entries_stay_newest_first():
     assert dates == sorted(dates, reverse=True), f"handoff entries out of order: {dates}"
 
 
-def test_temporary_meta_test_left_in_place():
-    # It must still exist (not deleted) — extending/removing it was explicitly out of scope.
-    assert (REPO / "tests" / "test_tmp_validation_has_teeth.py").is_file()
-
-
 def test_survivorship_caveat_documented_in_readme_and_loader():
     section = README.split("## Methodology and known limitations", 1)
     assert len(section) == 2, "README lost the 'Methodology and known limitations' section"

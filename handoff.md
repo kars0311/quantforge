@@ -52,8 +52,10 @@ ticked. Committed 2026-08-30 ("week 3 complete") with Kent's approval — everyt
    `SchemaError` on duplicate column labels).
 2. Deferred to week 6 (before schema freeze): R-side Parquet read check
    (`Rscript -e 'arrow::read_parquet(...)'` on a written prices file).
-3. Decide the fate of the temporary `tests/test_tmp_validation_has_teeth.py` (keep or delete),
-   then commit or drop it.
+3. Resolved 2026-08-30: the temporary `tests/test_tmp_validation_has_teeth.py` passed and Kent
+   chose deletion. Also removed the closeout verifier's `test_temporary_meta_test_left_in_place`
+   guard — it enforced a run-scoped instruction (and referenced an untracked file, so it would
+   have failed on a fresh clone).
 
 **Next up (per docs/TEN_WEEK_PLAN.md):** Week 4 — mean-reversion strategy + freeze the
 `Strategy`/`Engine` interfaces in `engine/base.py`.
