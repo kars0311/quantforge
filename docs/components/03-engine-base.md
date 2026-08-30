@@ -1,6 +1,7 @@
 # Component 03 — `src/quantforge/engine/base.py` (Strategy/Engine interfaces — the seam)
 
-**Week:** 2–4 (**FROZEN at week 4**) · **Status:** working (vertical slice) · **Depends on:** nothing
+**Week:** 2–4 · **Status:** **FROZEN as of week 4 (2026-08)** — in force, pinned by
+`tests/test_interface_freeze.py` · **Depends on:** nothing
 
 ## Function
 
@@ -10,8 +11,8 @@ interfaces, never to a concrete engine — which is what lets R/KNIME/MATLAB dro
 
 ## Requirements satisfied
 
-- **AR-1** — the single seam; frozen once mean-reversion lands (week 4). Any change after that is
-  a breaking change requiring an explicit decision.
+- **AR-1** — the single seam; frozen since week 4 (mean-reversion landed). Any change now is a
+  breaking change requiring an explicit decision — and will fail the introspection pin test.
 - **AR-4** — the documented "next engine drops in here" point.
 
 ## Interface (already implemented — documented here as the contract)

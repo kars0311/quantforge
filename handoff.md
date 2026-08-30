@@ -5,6 +5,59 @@ Newest entry first.
 
 ---
 
+## 2026-08-30 — Week 4 complete: mean-reversion + frozen seam (`build-verified` workflow)
+
+**Status: Week 4 complete and green.** `ruff check .` clean; `pytest` **304 passed / 2 skipped**
+(291 at closeout time; +13 from the closeout verifier's own suite landing after this entry)
+(baseline at run start was 184 passed / 2 skipped; growth is the two new week-4 suites, the new
+interchange-guard test, and the workflow verifiers' proving suites
+`test_mean_reversion_verifier.py` / `test_strategy_registry_verifier.py` /
+`test_strategies_week4_verifier.py` / `test_interface_freeze_verifier.py`; the 2 skips are the
+unchanged wk 8–9 stubs). Both Week 4
+boxes in `docs/TEN_WEEK_PLAN.md` are ticked. All work is **uncommitted** pending Kent's
+approval.
+
+### What was built this run
+
+1. **`src/quantforge/strategies/mean_reversion.py`** — `MeanReversionStrategy`: rolling z-score
+   `(P − SMA)/SD` (window = `min_periods` = lookback, strictly backward-looking), hysteresis via
+   a vectorized entry/exit event state machine (entry wins same-bar overlap; NaN z forces flat
+   and severs the ffill chain), `long_flat` and `long_short` modes with equal weight across
+   active names (Σw = 1 long-only, Σ|w| = 1 gross long-short), warmup rows flat. Short-side
+   friction caveat (borrow, locate, squeeze) documented in the module docstring.
+2. **`src/quantforge/strategies/__init__.py`** — the SF-3 vetted set: `STRATEGIES` registry
+   (momentum + mean_reversion, matches `ai/guardrails.VETTED_STRATEGIES`), `PARAM_WHITELIST`
+   with the exact doc bounds/defaults, and `validate_params` (merge-with-defaults, never
+   mutates input, `ValueError` naming the offending param; bools rejected for numeric params,
+   integral floats accepted for int params).
+3. **`tests/test_strategies.py`** — 21-test proof suite: hand-derived z-scores pin the exact
+   entry/hold/exit rows in both modes (cross-checked by an independent numpy recomputation),
+   gross/warmup/shape invariants, tail-truncation (no look-ahead), hysteresis path dependence,
+   every `validate_params` rejection class, and end-to-end runs through `PythonEngine`.
+4. **Frozen seam** — `src/quantforge/engine/base.py` docstrings now declare the interface
+   FROZEN as of week 4 (verified docstring-only by AST comparison; zero behavior change), and
+   `tests/test_interface_freeze.py` (12 introspection tests) pins signatures, dataclass
+   fields/order, abstract sets, and registry membership so any interface edit fails loudly.
+5. **`to_long` duplicate-column guard** (`src/quantforge/interchange.py`) — clears open item #1:
+   a wide frame with duplicated column labels now raises `SchemaError` naming the duplicated
+   label(s) instead of a bare pandas `AttributeError`; proven by a new test in
+   `tests/test_interchange_wide_long.py`. No other interchange behavior changed (round-trip
+   suites untouched and green). Docs synced: plan boxes ticked; status headers in
+   `docs/components/03-engine-base.md` / `05-strategies.md` / `16-tests.md` updated; the
+   week-3 closeout verifier's plan/handoff pins advanced to the week-4 state (history entry
+   now looked up by content, not position).
+
+### Open items (carried forward)
+
+1. Deferred to week 6 (before schema freeze): R-side Parquet read check
+   (`Rscript -e 'arrow::read_parquet(...)'` on a written prices file).
+2. Commit Week 4 once Kent approves — nothing from this run is committed.
+
+**Next up (per docs/TEN_WEEK_PLAN.md):** Week 5 — portfolio layer (`portfolio/optimize.py`,
+PyPortfolioOpt mean-variance + efficient frontier, strategy combination) + Streamlit UI shell.
+
+---
+
 ## 2026-08-29 — Week 3 rigor pass complete (`build-verified` workflow)
 
 **Status: Week 3 complete and green.** `ruff check .` clean; `pytest` **184 passed / 2 skipped**

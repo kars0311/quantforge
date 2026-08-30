@@ -203,6 +203,17 @@ def to_long(df: pd.DataFrame, kind: str) -> pd.DataFrame:
             f"wide {kind!r} frame index must be tz-aware UTC, got tz-naive "
             f"(localize with .tz_localize('UTC'))"
         )
+    # Duplicate column labels must be rejected before the per-column dtype loop: with a
+    # duplicated label, ``df[col]`` returns a two-column DataFrame (no ``.dtype``), so without
+    # this guard the caller would see a bare pandas AttributeError instead of a boundary error
+    # naming the actual problem. Duplicates can't come from ``to_wide`` (pivot forbids them) —
+    # only from a hand-built wide frame, which is exactly the input this boundary distrusts.
+    if not df.columns.is_unique:
+        dupes = df.columns[df.columns.duplicated()].unique().tolist()
+        raise SchemaError(
+            f"wide {kind!r} frame has duplicated column label(s) {dupes}; each ticker must "
+            f"appear as exactly one column to melt to long form"
+        )
     for col in df.columns:
         if not pd.api.types.is_numeric_dtype(df[col].dtype):
             raise SchemaError(

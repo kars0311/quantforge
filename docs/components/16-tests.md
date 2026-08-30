@@ -1,6 +1,7 @@
 # Component 16 — `tests/` (correctness, rigor, and safety proof)
 
-**Weeks:** continuous (milestones 3, 6, 8, 9) · **Status:** smoke green; 3 suites skipped-stubs
+**Weeks:** continuous (milestones 3, 6, 8, 9) · **Status:** wk 1–4 suites green; 2 later-week
+suites skipped (wk 8–9)
 
 ## Function
 
@@ -23,7 +24,8 @@ All tests run offline — network-dependent paths use committed fixtures or mock
 | `test_no_lookahead.py` (new) | a deliberately prescient signal (weights = sign of the *same day's* return) earns ~0 through the engine — the shift delays every position one day, killing same-day peeking | RG-1 | wk 3 |
 | `test_cost_accounting.py` (new) | hand-computed 2-asset, 5-day case: turnover and cost deductions exact to 1e-12 | RG-2 | wk 3 |
 | `test_metrics_reference.py` (new) | each `_KEYS` metric pinned to a hand-computed fixture value | AR-3 | wk 3 |
-| `test_strategies.py` (new) | mean-reversion entries/exits on a hand-built oscillating series (both modes); gross ≤ 1; warmup flat; `validate_params` rejections | FR-3, SF-3 | wk 4 |
+| `test_strategies.py` | mean-reversion entries/exits on a hand-built oscillating series (both modes); gross ≤ 1; warmup flat; `validate_params` rejections | FR-3, SF-3 | ✅ green (wk 4) |
+| `test_interface_freeze.py` | pins the frozen `Strategy`/`Engine`/`BacktestResult` seam by introspection — signatures, dataclass fields/order, abstract-method sets, registry membership — so any interface edit fails loudly | AR-1 | ✅ green (wk 4) |
 | `test_portfolio.py` (new) | Σw = 1, bounds respected; frontier monotone; combine_returns arithmetic | FR-4 | wk 5 |
 | `test_r_cross_check.py` (new) | subprocess `Rscript tearsheet.R` on a fixture; metrics + weights within ~1% (`skipif` no Rscript/packages) | RG-6 | wk 6 |
 | `test_budget.py` (new) | caps at boundary, UTC rollover, kill-switch, fail-closed, persistence | SF-1/SF-2 | wk 7 |

@@ -1,6 +1,6 @@
 # Component 05 — `src/quantforge/strategies/` (momentum, mean-reversion)
 
-**Weeks:** 2 (momentum ✓), 4 (mean-reversion) · **Status:** momentum working; mean-reversion stub
+**Weeks:** 2 (momentum ✓), 4 (mean-reversion ✓) · **Status:** both strategies working; registry + whitelist live
 **Depends on:** engine/base
 
 ## Function
@@ -37,7 +37,7 @@ Signal: trailing `lookback`-day return `prices / prices.shift(lookback) − 1`. 
 equal-weight the top-n ranked names; else weight ∝ positive momentum, normalized to Σw = 1.
 Warmup rows → 0. Long-only by construction.
 
-### `MeanReversionStrategy` (week 4 — spec)
+### `MeanReversionStrategy` (implemented — week 4)
 
 Fade short-term extremes via a rolling z-score (all windows `min_periods=lookback`, backward-looking):
 
@@ -59,3 +59,6 @@ z_t = (P_t − SMA_lookback(P)_t) / SD_lookback(P)_t
 - Mean-reversion passes: shape == prices.shape, gross ≤ 1, warmup rows flat, a hand-built
   oscillating price series produces the expected entries/exits in both modes; `validate_params`
   covered by tests; interfaces frozen (week 4).
+- **Met (week 4):** all of the above are proven by `tests/test_strategies.py` (hand-derived
+  z-score entries/exits in both modes, gross/warmup invariants, every `validate_params`
+  rejection class) and the freeze by `tests/test_interface_freeze.py`.

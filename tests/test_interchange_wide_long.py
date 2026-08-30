@@ -155,7 +155,8 @@ def test_to_long_rejects_non_datetime_index():
 
 def test_to_long_rejects_tz_naive_index():
     wide = pd.DataFrame(
-        {"AAPL": [1.0, 2.0]}, index=pd.date_range("2024-01-02", periods=2)  # naive
+        {"AAPL": [1.0, 2.0]},
+        index=pd.date_range("2024-01-02", periods=2),  # naive
     )
     with pytest.raises(SchemaError, match="naive"):
         to_long(wide, "prices")
@@ -164,6 +165,20 @@ def test_to_long_rejects_tz_naive_index():
 def test_to_long_rejects_non_numeric_column():
     wide = pd.DataFrame(
         {"AAPL": ["a", "b"]}, index=pd.date_range("2024-01-02", periods=2, tz="UTC")
+    )
+    with pytest.raises(SchemaError, match="AAPL"):
+        to_long(wide, "prices")
+
+
+def test_to_long_rejects_duplicated_column_labels_with_schema_error():
+    # A hand-built wide frame with the same ticker twice cannot be melted unambiguously.
+    # Before the guard this surfaced as a bare pandas AttributeError (df[col] on a duplicated
+    # label yields a DataFrame, which has no .dtype); the boundary must instead raise its one
+    # exception type and name the offending label.
+    wide = pd.DataFrame(
+        [[10.0, 11.0, 20.0], [12.0, 13.0, 21.0]],
+        columns=["AAPL", "AAPL", "GOOG"],
+        index=pd.date_range("2024-01-02", periods=2, tz="UTC"),
     )
     with pytest.raises(SchemaError, match="AAPL"):
         to_long(wide, "prices")
@@ -187,8 +202,10 @@ def test_to_long_canonicalizes_messy_but_equivalent_wide_frame():
     # int dtype, and a US/Eastern (aware, non-UTC) index. 19:00 Eastern on Jan 1 IS midnight
     # UTC on Jan 2 — hand-computed conversion, not a relabel.
     eastern = pd.DatetimeIndex(
-        [pd.Timestamp("2024-01-02 19:00", tz="US/Eastern"),
-         pd.Timestamp("2024-01-01 19:00", tz="US/Eastern")]
+        [
+            pd.Timestamp("2024-01-02 19:00", tz="US/Eastern"),
+            pd.Timestamp("2024-01-01 19:00", tz="US/Eastern"),
+        ]
     )
     messy = pd.DataFrame({"GOOG": [21, 20], "AAPL": [11, 10]}, index=eastern)
     assert messy.index.name is None and messy.columns.name is None

@@ -1,11 +1,12 @@
-"""Verifier tests for the Week-3 closeout milestone (docs-only; offline, no heavy deps).
+"""Verifier tests pinning the documented project state (docs-only; offline, no heavy deps).
 
-Pins the *documented* project state so it cannot silently drift from reality:
-- docs/TEN_WEEK_PLAN.md: exactly Weeks 1-3 ticked, Weeks 4-10 + Stretch untouched. The count is
+Written at the Week-3 closeout and advanced at each subsequent closeout (currently Week 4) so
+the docs cannot silently drift from reality:
+- docs/TEN_WEEK_PLAN.md: exactly Weeks 1-4 ticked, Weeks 5-10 + Stretch untouched. The count is
   exact and adversarial — a single stray "[x]" anywhere later in the plan fails the suite, so
   nobody can quietly claim future work as done.
-- handoff.md: the topmost entry is the 2026-08-29 closeout, names the five work items, records
-  the exact gate results, carries the open items forward, and names Week 4 as next. Entries stay
+- handoff.md: the 2026-08-29 Week-3 closeout entry is preserved verbatim in the history (looked
+  up by content, not position, so newer entries can be prepended on top), and entries stay
   newest-first (the AGENTS.md status-handoff contract a fresh session relies on).
 - The survivorship caveat is genuinely documented (README section + authoritative note in
   data/loader.py), and the stale "~28 names" wording is gone from the loader design doc.
@@ -29,22 +30,23 @@ def _plan_sections() -> dict[str, str]:
     return dict(zip(headings, bodies, strict=True))
 
 
-def test_plan_weeks_1_to_3_fully_checked():
-    sections = _plan_sections()
-    for week in ("Week 1", "Week 2", "Week 3"):
+def test_plan_weeks_1_to_4_fully_checked():
+    # Per-week minimum item counts guard against a week losing checklist items outright.
+    for week, min_items in {"Week 1": 4, "Week 2": 3, "Week 3": 3, "Week 4": 2}.items():
+        sections = _plan_sections()
         heading = next(h for h in sections if h.startswith(week))
         body = sections[heading]
         assert "- [ ]" not in body, f"{week} still has an unchecked box"
-        assert body.count("- [x]") >= 3, f"{week} lost checklist items"
+        assert body.count("- [x]") >= min_items, f"{week} lost checklist items"
 
 
-def test_plan_weeks_4_plus_and_stretch_all_unchecked():
-    # Adversarial exact count: the plan has precisely 10 ticked boxes (4+3+3 for Weeks 1-3).
-    # Any extra "[x]" — in Week 4-10, Stretch, or a sneaky duplicate — fails here.
-    assert PLAN.count("- [x]") == 10
+def test_plan_weeks_5_plus_and_stretch_all_unchecked():
+    # Adversarial exact count: the plan has precisely 12 ticked boxes (4+3+3+2 for Weeks 1-4).
+    # Any extra "[x]" — in Week 5-10, Stretch, or a sneaky duplicate — fails here.
+    assert PLAN.count("- [x]") == 12
     sections = _plan_sections()
-    later = [h for h in sections if re.match(r"Week ([4-9]|10) ", h) or "Stretch" in h]
-    assert len(later) == 8  # Weeks 4..10 + Stretch — all present, none deleted to game the count
+    later = [h for h in sections if re.match(r"Week ([5-9]|10) ", h) or "Stretch" in h]
+    assert len(later) == 7  # Weeks 5..10 + Stretch — all present, none deleted to game the count
     for heading in later:
         assert "- [x]" not in sections[heading], f"'{heading}' has a prematurely ticked box"
         assert "- [ ]" in sections[heading], f"'{heading}' lost its checklist"
@@ -58,12 +60,12 @@ def _handoff_entries() -> list[tuple[str, str]]:
     return list(zip(dates, bodies, strict=True))
 
 
-def test_handoff_topmost_entry_is_the_closeout():
+def test_handoff_week3_closeout_entry_preserved():
+    # Looked up by date + content (not position) so later closeouts can prepend entries on top
+    # without rewriting history; the Week-3 record itself must stay intact.
     entries = _handoff_entries()
     assert len(entries) >= 3  # closeout + manual backtesting session + week-1 run
-    date, body = entries[0]
-    assert date == "2026-08-29"
-    assert "Week 3" in body
+    body = next(b for d, b in entries if d == "2026-08-29" and "Week 3 rigor" in b)
 
     # The five work items, by their load-bearing names.
     for needle in (

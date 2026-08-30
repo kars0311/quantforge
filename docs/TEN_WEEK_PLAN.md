@@ -20,8 +20,8 @@ flexible home internship — the timeline can stretch a little rather than cutti
 - [x] pytest suite covering cost accounting + no-look-ahead.
 
 ## Week 4 — Strategy #2 + lock the seam
-- [ ] **Mean-reversion** strategy.
-- [ ] Refactor strategies + engine behind the `Strategy`/`Engine` interfaces (`engine/base.py`). Freeze the interface.
+- [x] **Mean-reversion** strategy.
+- [x] Refactor strategies + engine behind the `Strategy`/`Engine` interfaces (`engine/base.py`). Freeze the interface.
 
 ## Week 5 — Portfolio layer + UI shell
 - [ ] PyPortfolioOpt mean-variance + efficient frontier (`portfolio/optimize.py`).
