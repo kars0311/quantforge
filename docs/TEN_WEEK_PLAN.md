@@ -4,20 +4,20 @@ Front-loaded so the credible quant core lands first. Stretch items are the first
 flexible home internship — the timeline can stretch a little rather than cutting the R or AI core.
 
 ## Week 1 — Foundations + interchange contract
-- [ ] Repo, venv, `requirements.txt`, ruff + pytest green in CI.
-- [ ] `data/loader.py`: yfinance → **Parquet** cache; fixed historical universe.
-- [ ] **Arrow/Parquet interchange schema** (`interchange.py`) — the polyglot backbone.
-- [ ] README skeleton; plot a price series end-to-end.
+- [x] Repo, venv, `requirements.txt`, ruff + pytest green in CI.
+- [x] `data/loader.py`: yfinance → **Parquet** cache; fixed historical universe.
+- [x] **Arrow/Parquet interchange schema** (`interchange.py`) — the polyglot backbone.
+- [x] README skeleton; plot a price series end-to-end.
 
 ## Week 2 — Engine + strategy #1
-- [ ] Custom **vectorized backtester** (`engine/python_engine.py`).
-- [ ] **Momentum** strategy (`strategies/momentum.py`).
-- [ ] Metrics (`metrics/performance.py`): total/CAGR, Sharpe, max drawdown.
+- [x] Custom **vectorized backtester** (`engine/python_engine.py`).
+- [x] **Momentum** strategy (`strategies/momentum.py`).
+- [x] Metrics (`metrics/performance.py`): total/CAGR, Sharpe, max drawdown.
 
 ## Week 3 — Rigor pass
-- [ ] Transaction costs; explicit **look-ahead** and **survivorship** handling (documented).
-- [ ] **Validate the engine vs `backtesting.py`** on momentum (`tests/test_engine_vs_backtestingpy.py`).
-- [ ] pytest suite covering cost accounting + no-look-ahead.
+- [x] Transaction costs; explicit **look-ahead** and **survivorship** handling (documented).
+- [x] **Validate the engine vs `backtesting.py`** on momentum (`tests/test_engine_vs_backtestingpy.py`).
+- [x] pytest suite covering cost accounting + no-look-ahead.
 
 ## Week 4 — Strategy #2 + lock the seam
 - [ ] **Mean-reversion** strategy.

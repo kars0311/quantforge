@@ -5,6 +5,80 @@ Newest entry first.
 
 ---
 
+## 2026-08-29 — Week 3 rigor pass complete (`build-verified` workflow)
+
+**Status: Week 3 complete and green.** `ruff check .` clean; `pytest` **184 passed / 2 skipped**
+(baseline at run start was 130 passed / 2 skipped; growth is the new rigor suites plus the
+workflow verifiers' proving tests). All Week 1–3 boxes in `docs/TEN_WEEK_PLAN.md` are now
+ticked. Committed 2026-08-30 ("week 3 complete") with Kent's approval — everything except
+`tests/test_tmp_validation_has_teeth.py`, which stays uncommitted pending his review.
+
+### What was built this run
+
+1. **Engine hardening** (`src/quantforge/engine/python_engine.py`): input validation raising
+   `ValueError` on duplicated/non-monotonic price indexes, non-numeric columns, and gross
+   exposure > 1.0; NaN policy documented in the docstring (NaN price ⇒ 0 return, NaN position ⇒
+   flat); `meta` enriched with `n_days` and `total_turnover`. Zero numerical change for valid
+   inputs — equity curves verified byte-identical to the pre-change engine.
+2. **`tests/test_no_lookahead.py`** — proves a prescient signal earns statistically nothing
+   through the engine, a day-*t* position earns exactly day *t+1*'s return, day 0 is flat, and
+   tail truncation never changes earlier returns. Mutating away `positions.shift(1)` makes it
+   fail in the profitable direction (teeth confirmed).
+3. **`tests/test_cost_accounting.py`** — hand-computed 2-asset/5-day case pinning net returns,
+   equity, and `total_turnover` to 1e-12; zero-cost default, cost linearity in bps, buy/sell/
+   short symmetry, and day-1 entry-cost timing. A sed-mutated half-cost engine fails 4/6 tests.
+4. **`tests/test_metrics_reference.py`** — pins every `_KEYS` metric in `metrics/performance.py`
+   to in-test numpy recomputations on literal returns (population std ddof=0, strict `r > 0`
+   hit-rate, exact ordered key list — the week-6 R cross-language contract). Mutation-checked.
+5. **Docs**: README gained a "Methodology and known limitations" section (survivorship caveat
+   with pointer to the authoritative note in `data/loader.py`, no-look-ahead and cost-model
+   summaries citing their proving tests); `docs/components/02-data-loader.md` "~28 names" → 30
+   (closes the stale open item from 2026-07-21).
+
+### Notes
+
+- `tests/test_tmp_validation_has_teeth.py` (untracked) was **deliberately left untouched**
+  throughout this run — it is a temporary meta-test awaiting Kent's review.
+- The engine-vs-`backtesting.py` validation item was already done before this run (see the
+  manual-session entry below).
+- Post-run fix by the main session: `docs/components/16-tests.md`'s row for
+  `test_no_lookahead.py` described an inverted construction (sign of *tomorrow's* return earns
+  ~0 — actually earns positive under the engine convention); reworded to match the implemented
+  same-day-peek test, per the milestone-2 verifier's finding.
+
+### Open items (carried forward)
+
+1. Polish: `to_long` still lacks the `df.columns.is_unique` guard (bare pandas error instead of
+   `SchemaError` on duplicate column labels).
+2. Deferred to week 6 (before schema freeze): R-side Parquet read check
+   (`Rscript -e 'arrow::read_parquet(...)'` on a written prices file).
+3. Decide the fate of the temporary `tests/test_tmp_validation_has_teeth.py` (keep or delete),
+   then commit or drop it.
+
+**Next up (per docs/TEN_WEEK_PLAN.md):** Week 4 — mean-reversion strategy + freeze the
+`Strategy`/`Engine` interfaces in `engine/base.py`.
+
+---
+
+## 2026-08-29 — Engine validated against backtesting.py (manual session, no workflow)
+
+**Status: green.** `ruff check .` clean; `pytest` 129 passed / 2 skipped.
+
+- Installed `backtesting` (0.6.5) into the venv — it was declared in `requirements.txt` but missing.
+- Implemented `tests/test_engine_vs_backtestingpy.py` (was a `TODO(week3)` skip): single-asset
+  long/flat momentum run through both `PythonEngine` and `backtesting.py` on identical seeded data.
+  Flat OHLC bars + `trade_on_close=True` make the fill convention match the engine's
+  `positions.shift(1)`; equity curves agree to rtol 5e-4, Sharpe/total-return/max-drawdown match.
+  This checks off the "validate the engine vs backtesting.py" item of Week 3.
+- Week 1 work is now committed (`3f95ad7`); the older "commit pending approval" note below is stale.
+- Still open from the 2026-07-21 entry: the `~28 names` → 30 doc fix in
+  `docs/components/02-data-loader.md`, and the missing `df.columns.is_unique` guard in `to_long`.
+
+**Next up:** rest of Week 3 rigor — explicit no-look-ahead and cost-accounting pytest coverage,
+survivorship caveat documentation. This session's work is uncommitted.
+
+---
+
 ## 2026-07-21 — Week 1: interchange + loader (`build-verified` workflow, run `wf_54587a13-997`)
 
 **Status: Week 1 complete and green.** `ruff check .` clean; `pytest` 128 passed / 3 skipped

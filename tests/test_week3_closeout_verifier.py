@@ -1,0 +1,121 @@
+"""Verifier tests for the Week-3 closeout milestone (docs-only; offline, no heavy deps).
+
+Pins the *documented* project state so it cannot silently drift from reality:
+- docs/TEN_WEEK_PLAN.md: exactly Weeks 1-3 ticked, Weeks 4-10 + Stretch untouched. The count is
+  exact and adversarial — a single stray "[x]" anywhere later in the plan fails the suite, so
+  nobody can quietly claim future work as done.
+- handoff.md: the topmost entry is the 2026-08-29 closeout, names the five work items, records
+  the exact gate results, carries the open items forward, and names Week 4 as next. Entries stay
+  newest-first (the AGENTS.md status-handoff contract a fresh session relies on).
+- The survivorship caveat is genuinely documented (README section + authoritative note in
+  data/loader.py), and the stale "~28 names" wording is gone from the loader design doc.
+"""
+
+import re
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+PLAN = (REPO / "docs" / "TEN_WEEK_PLAN.md").read_text()
+HANDOFF = (REPO / "handoff.md").read_text()
+README = (REPO / "README.md").read_text()
+
+
+def _plan_sections() -> dict[str, str]:
+    """Split the plan into {heading: body} chunks keyed by the '## ...' line."""
+    parts = re.split(r"^#{2,3} +(.+)$", PLAN, flags=re.MULTILINE)
+    # parts[0] is the preamble; then alternating heading, body ('###' catches the Stretch section)
+    headings = parts[1::2]
+    bodies = parts[2::2]
+    return dict(zip(headings, bodies, strict=True))
+
+
+def test_plan_weeks_1_to_3_fully_checked():
+    sections = _plan_sections()
+    for week in ("Week 1", "Week 2", "Week 3"):
+        heading = next(h for h in sections if h.startswith(week))
+        body = sections[heading]
+        assert "- [ ]" not in body, f"{week} still has an unchecked box"
+        assert body.count("- [x]") >= 3, f"{week} lost checklist items"
+
+
+def test_plan_weeks_4_plus_and_stretch_all_unchecked():
+    # Adversarial exact count: the plan has precisely 10 ticked boxes (4+3+3 for Weeks 1-3).
+    # Any extra "[x]" — in Week 4-10, Stretch, or a sneaky duplicate — fails here.
+    assert PLAN.count("- [x]") == 10
+    sections = _plan_sections()
+    later = [h for h in sections if re.match(r"Week ([4-9]|10) ", h) or "Stretch" in h]
+    assert len(later) == 8  # Weeks 4..10 + Stretch — all present, none deleted to game the count
+    for heading in later:
+        assert "- [x]" not in sections[heading], f"'{heading}' has a prematurely ticked box"
+        assert "- [ ]" in sections[heading], f"'{heading}' lost its checklist"
+
+
+def _handoff_entries() -> list[tuple[str, str]]:
+    """(date, body) per '## YYYY-MM-DD — ...' entry, in file order (newest first)."""
+    parts = re.split(r"^## (\d{4}-\d{2}-\d{2})", HANDOFF, flags=re.MULTILINE)
+    dates = parts[1::2]
+    bodies = parts[2::2]
+    return list(zip(dates, bodies, strict=True))
+
+
+def test_handoff_topmost_entry_is_the_closeout():
+    entries = _handoff_entries()
+    assert len(entries) >= 3  # closeout + manual backtesting session + week-1 run
+    date, body = entries[0]
+    assert date == "2026-08-29"
+    assert "Week 3" in body
+
+    # The five work items, by their load-bearing names.
+    for needle in (
+        "python_engine.py",  # engine hardening
+        "test_no_lookahead.py",
+        "test_cost_accounting.py",
+        "test_metrics_reference.py",
+        "02-data-loader.md",  # docs item (README limitations + ~28 -> 30 fix)
+    ):
+        assert needle in body, f"closeout entry is missing work item {needle!r}"
+
+    # Exact recorded gate results (verified against a fresh run at review time), > 130 baseline.
+    match = re.search(r"(\d+) passed / (\d+) skipped", body)
+    assert match, "closeout entry does not record pytest counts"
+    assert int(match.group(1)) > 130
+    assert int(match.group(2)) == 2
+    assert "ruff" in body
+
+    # The deliberate non-touch of the temporary meta-test, on record.
+    assert "test_tmp_validation_has_teeth.py" in body
+
+    # Open items carried forward + next target.
+    assert "is_unique" in body
+    assert "read_parquet" in body
+    assert "Kent" in body  # commit pending approval
+    assert "Week 4" in body and "mean-reversion" in body
+
+
+def test_handoff_entries_stay_newest_first():
+    # Adversarial ordering check: appending (instead of prepending) an entry fails here.
+    dates = [d for d, _ in _handoff_entries()]
+    assert dates == sorted(dates, reverse=True), f"handoff entries out of order: {dates}"
+
+
+def test_temporary_meta_test_left_in_place():
+    # It must still exist (not deleted) — extending/removing it was explicitly out of scope.
+    assert (REPO / "tests" / "test_tmp_validation_has_teeth.py").is_file()
+
+
+def test_survivorship_caveat_documented_in_readme_and_loader():
+    section = README.split("## Methodology and known limitations", 1)
+    assert len(section) == 2, "README lost the 'Methodology and known limitations' section"
+    body = section[1].split("\n## ", 1)[0]
+    assert "urvivorship" in body
+    assert "look-ahead" in body.lower()
+    assert "data/loader.py" in body  # points at the authoritative note
+
+    loader_src = (REPO / "src" / "quantforge" / "data" / "loader.py").read_text()
+    assert "urvivorship" in loader_src, "authoritative survivorship note missing from loader.py"
+
+
+def test_loader_doc_universe_count_fixed():
+    doc = (REPO / "docs" / "components" / "02-data-loader.md").read_text()
+    assert "~28" not in doc, "stale '~28 names' wording is back"
+    assert "30 names" in doc

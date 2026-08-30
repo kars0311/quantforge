@@ -61,6 +61,34 @@ requirement — see `src/quantforge/ai/guardrails.py` and [`docs/architecture.md
 - Expensive AI paths **gated** (passcode); open traffic gets cached scenarios only.
 - **No LLM-generated code is executed on the public server** — public mode is parameter-only.
 
+## Methodology and known limitations
+
+Honest accounting of what the backtests do and do not claim. Each convention below is enforced by a
+dedicated test where one exists; the custom engine is additionally validated against `backtesting.py`
+(`tests/test_engine_vs_backtestingpy.py`).
+
+- **Survivorship bias (known limitation).** The universe is a **fixed, hand-picked list of 30 of
+  *today's* names** — not a point-in-time constituent history. Companies that were delisted, went
+  bankrupt, or shrank out of relevance along the way are absent, so historical results are
+  **optimistic**: every name in the panel is, by construction, a survivor. The proper fix — a
+  point-in-time universe — is an acknowledged non-goal for v1.0
+  ([`docs/product.md` §1](docs/product.md)). The authoritative caveat lives in the module docstring
+  of [`src/quantforge/data/loader.py`](src/quantforge/data/loader.py), next to the frozen
+  `UNIVERSE` list itself.
+- **No look-ahead.** Positions decided using data through the close of day *t* earn day *t+1*'s
+  return. The engine enforces this mechanically via `positions.shift(1)` — a signal can never be
+  paid for same-day information it could not have known at decision time. Proven by
+  [`tests/test_no_lookahead.py`](tests/test_no_lookahead.py), which shows a deliberately prescient
+  signal earns nothing once run through the engine.
+- **Transaction costs.** Modeled as basis points charged on turnover (`Σ|Δweight|` per day). The
+  project's default assumption is **10 bps per unit turnover** ([`docs/product.md` §5.3](docs/product.md)),
+  user-overridable via the engine's `cost_bps` parameter. The accounting — hand-computed cost
+  series, linearity in the rate, buy/sell/short symmetry, day-of-charge — is proven by
+  [`tests/test_cost_accounting.py`](tests/test_cost_accounting.py).
+- **Short borrow fees are not modeled (known limitation).** Short positions are charged turnover
+  costs like any trade, but the ongoing cost of borrowing shares is ignored, so long–short results
+  are slightly optimistic ([`docs/components/04-python-engine.md`](docs/components/04-python-engine.md)).
+
 ## Quickstart
 
 ```bash

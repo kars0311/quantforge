@@ -21,8 +21,8 @@ must never depend on yfinance being up.
 - **Range:** 2010-01-01 → 2026-06-30 (fixed cutoff — reproducible, never "up to today").
 - **Splits (chronological 60/20/20):** train 2010-01-01→2019-12-31 · validation
   2020-01-01→2022-12-31 · holdout 2023-01-01→2026-06-30.
-- **Universe (~28 names, tech-heavy, incl. ADRs):** candidate list below; finalized in week 1
-  after verifying data availability, then **frozen**.
+- **Universe (30 names, tech-heavy, incl. ADRs):** list below; verified for data availability and
+  **frozen** in week 1.
   - Tech: AAPL MSFT NVDA GOOGL AMZN META CRM ADBE ORCL AVGO
   - ADRs (international, US-listed, USD): TSM ASML SAP TM NVO SONY
   - Financials: JPM GS V · Healthcare: JNJ UNH PFE · Consumer: PG KO MCD WMT HD

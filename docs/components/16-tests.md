@@ -20,7 +20,7 @@ All tests run offline — network-dependent paths use committed fixtures or mock
 | `test_engine_vs_backtestingpy.py` | single-asset momentum: equity/Sharpe match `backtesting.py` within 1e-6 rel | RG-5 | skipped → wk 3 |
 | `test_interchange_roundtrip.py` (new) | write→read identity per kind; SchemaError on bad frames; wide↔long inverse | AR-2 | wk 1 |
 | `test_loader.py` (new) | cache-hit = no network (mocked yfinance); output validates; split bounds sane | FR-1, RG-4 | wk 1 |
-| `test_no_lookahead.py` (new) | a deliberately prescient signal (weights = sign of *tomorrow's* return) earns ~0 through the engine — the shift kills clairvoyance | RG-1 | wk 3 |
+| `test_no_lookahead.py` (new) | a deliberately prescient signal (weights = sign of the *same day's* return) earns ~0 through the engine — the shift delays every position one day, killing same-day peeking | RG-1 | wk 3 |
 | `test_cost_accounting.py` (new) | hand-computed 2-asset, 5-day case: turnover and cost deductions exact to 1e-12 | RG-2 | wk 3 |
 | `test_metrics_reference.py` (new) | each `_KEYS` metric pinned to a hand-computed fixture value | AR-3 | wk 3 |
 | `test_strategies.py` (new) | mean-reversion entries/exits on a hand-built oscillating series (both modes); gross ≤ 1; warmup flat; `validate_params` rejections | FR-3, SF-3 | wk 4 |
