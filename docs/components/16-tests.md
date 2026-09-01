@@ -1,6 +1,6 @@
 # Component 16 — `tests/` (correctness, rigor, and safety proof)
 
-**Weeks:** continuous (milestones 3, 6, 8, 9) · **Status:** wk 1–4 suites green; 2 later-week
+**Weeks:** continuous (milestones 3, 6, 8, 9) · **Status:** wk 1–5 suites green; 2 later-week
 suites skipped (wk 8–9)
 
 ## Function
@@ -26,7 +26,10 @@ All tests run offline — network-dependent paths use committed fixtures or mock
 | `test_metrics_reference.py` (new) | each `_KEYS` metric pinned to a hand-computed fixture value | AR-3 | wk 3 |
 | `test_strategies.py` | mean-reversion entries/exits on a hand-built oscillating series (both modes); gross ≤ 1; warmup flat; `validate_params` rejections | FR-3, SF-3 | ✅ green (wk 4) |
 | `test_interface_freeze.py` | pins the frozen `Strategy`/`Engine`/`BacktestResult` seam by introspection — signatures, dataclass fields/order, abstract-method sets, registry membership — so any interface edit fails loudly | AR-1 | ✅ green (wk 4) |
-| `test_portfolio.py` (new) | Σw = 1, bounds respected; frontier monotone; combine_returns arithmetic | FR-4 | wk 5 |
+| `test_portfolio_optimize.py` | Σw = 1 within 1e-8 + long-only bounds (both objectives); min-vol matches a closed-form 2-asset solution; every params/panel/bounds rejection message-matched; `combine_returns` vs hand-computed blend at 1e-12; frontier anchored at min-vol, risk/ret monotone, interchange `weights`/`frontier` kinds validate + round-trip; no input mutation; determinism | FR-4, AR-2 | ✅ green (wk 5) |
+| `test_portfolio_combination.py` | FR-4 end-to-end: both vetted strategies → engine → 2-col return panel → `optimize_weights` → `combine_returns` → `compute_metrics`, all via frozen interfaces; blend equals a plain-numpy dot product at 1e-12; convex-blend vol ≤ max individual vol; split discipline (no holdout dates) | FR-4, RG-4 | ✅ green (wk 5) |
+| `test_app_shell.py` | UI shell headless: import pulls no `quantforge.ai.*`; chart builders pinned to hand computations (benchmark equity no-look-ahead, drawdown ≤ 0); date pickers bounded to train+val with holdout unselectable; param controls introspect `PARAM_WHITELIST` live; full-script `AppTest` run with zero exceptions | FR-10, RG-4, AR-1 | ✅ green (wk 5) |
+| `test_verify_week5_optimize.py` / `test_verify_week5_frontier.py` / `test_portfolio_combination_verifier.py` / `test_app_shell_verifier.py` / `test_week5_closeout_verifier.py` | independent verifier suites (build-verified workflow): re-prove the week-5 milestones (and the docs-closeout state) with adversarial cases written by a separate agent | FR-4, FR-10 | ✅ green (wk 5) |
 | `test_r_cross_check.py` (new) | subprocess `Rscript tearsheet.R` on a fixture; metrics + weights within ~1% (`skipif` no Rscript/packages) | RG-6 | wk 6 |
 | `test_budget.py` (new) | caps at boundary, UTC rollover, kill-switch, fail-closed, persistence | SF-1/SF-2 | wk 7 |
 | `test_mcp_tools.py` (new) | per-tool happy path + rejections (bad ticker, range, params, unknown handle, **holdout dates**) | FR-7, SF-7 | wk 7 |

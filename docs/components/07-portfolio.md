@@ -1,6 +1,6 @@
 # Component 07 — `src/quantforge/portfolio/optimize.py` (portfolio optimization)
 
-**Week:** 5 · **Status:** stub · **Depends on:** metrics, interchange
+**Week:** 5 · **Status:** working (R cross-check deferred to week 6) · **Depends on:** metrics, interchange
 
 ## Function
 
@@ -49,3 +49,13 @@ def combine_returns(returns: pd.DataFrame, weights: pd.Series) -> pd.Series
 - Weights sum to 1 within 1e-8, respect bounds; frontier risk column is monotonically
   increasing with ret after the min-vol point; R cross-check within ~1% (weights and achieved
   vol); results written via `write_frame` and rendered by the UI.
+
+**Status vs done-when (week 5):** all Python-side criteria are met and proven by
+`tests/test_portfolio_optimize.py` and `tests/test_portfolio_combination.py` (weights Σ=1
+within 1e-8 and long-only bounds; frontier risk monotone from the min-vol anchor; interchange
+`weights`/`frontier` emission via `write_frame` round-trips; strategy combination flows
+end-to-end into the UI's Portfolio tab). The **RG-6 R PortfolioAnalytics cross-check (~1%) is
+NOT done yet** — it is deliberately deferred to week 6 per `docs/TEN_WEEK_PLAN.md` (the R layer
+does not exist until then), which is exactly why this module sticks to textbook estimators the
+R side can reproduce. Until that check lands, treat the optimizer as single-implementation
+verified only.

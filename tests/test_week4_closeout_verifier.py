@@ -2,12 +2,14 @@
 
 Independently proves the closeout's four deliverables so none can silently regress:
 
-- docs/TEN_WEEK_PLAN.md: both Week-4 boxes ticked, exactly 12 ticked overall, Weeks 5-10 +
+- docs/TEN_WEEK_PLAN.md: both Week-4 boxes ticked, exactly 15 ticked overall (advanced from 12
+  at the Week-5 closeout, matching the precedent of advancing pins each week), Weeks 6-10 +
   Stretch untouched.
 - The three component docs reflect the new statuses: no stale "stub" in 05-strategies.md, no
   stale "t-1" timing convention in 03-engine-base.md, the freeze pinned by name, and
   16-tests.md's inventory listing both week-4 suites as green.
-- handoff.md's topmost entry is the dated 2026-08-30 closeout naming the five deliverables,
+- handoff.md's 2026-08-30 Week-4 closeout entry is preserved in the history (looked up by
+  content, not position, so later closeouts can prepend on top), naming the five deliverables,
   the exact final gate counts, the carried R-side open item, and Week 5 as next.
 - The new `to_long` duplicate-column guard: a hand-built wide frame with duplicated column
   labels raises SchemaError naming every offending label — never the bare pandas
@@ -62,13 +64,13 @@ def test_plan_week4_both_items_ticked_and_named():
 
 
 def test_plan_no_other_checkbox_changed():
-    # Weeks 1-3 stay fully ticked (4+3+3), Week 4 adds 2 — exactly 12 in the whole file, so a
-    # stray tick anywhere later (or an untick earlier) fails here.
-    assert _PLAN.count("- [x]") == 12
-    for week, n in {"Week 1": 4, "Week 2": 3, "Week 3": 3}.items():
+    # Weeks 1-3 stay fully ticked (4+3+3), Week 4 adds 2, Week 5 adds 3 — exactly 15 in the
+    # whole file, so a stray tick anywhere later (or an untick earlier) fails here.
+    assert _PLAN.count("- [x]") == 15
+    for week, n in {"Week 1": 4, "Week 2": 3, "Week 3": 3, "Week 5": 3}.items():
         body = _plan_section(week)
         assert body.count("- [x]") == n and "- [ ]" not in body
-    for later in ("Week 5", "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Stretch"):
+    for later in ("Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Stretch"):
         body = _plan_section(later)
         assert "- [x]" not in body, f"{later} has a prematurely ticked box"
         assert "- [ ]" in body, f"{later} lost its checklist"
@@ -110,17 +112,21 @@ def test_tests_doc_inventory_lists_week4_suites_green():
 # ---------------------------------------------------------------- (3) handoff entry
 
 
-def _handoff_top_entry() -> tuple[str, str]:
+def _handoff_entries() -> list[tuple[str, str]]:
+    """(date, full text) per '## YYYY-MM-DD — ...' entry, in file order (newest first)."""
     entries = re.split(r"^## ", _HANDOFF, flags=re.MULTILINE)[1:]
-    heading, _, body = entries[0].partition("\n")
-    date = re.match(r"(\d{4}-\d{2}-\d{2})", heading).group(1)
-    return date, heading + "\n" + body
+    out = []
+    for entry in entries:
+        heading, _, body = entry.partition("\n")
+        date = re.match(r"(\d{4}-\d{2}-\d{2})", heading).group(1)
+        out.append((date, heading + "\n" + body))
+    return out
 
 
-def test_handoff_top_entry_is_the_week4_closeout():
-    date, body = _handoff_top_entry()
-    assert date == "2026-08-30"
-    assert "Week 4" in body
+def test_handoff_week4_closeout_entry_preserved():
+    # Looked up by date + content (not position) so later closeouts can prepend entries on top
+    # without rewriting history; the Week-4 record itself must stay intact.
+    body = next(b for d, b in _handoff_entries() if d == "2026-08-30" and "Week 4" in b)
     # The five deliverables, by load-bearing name.
     for needle in (
         "mean_reversion",

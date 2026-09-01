@@ -1,8 +1,8 @@
 """Verifier tests pinning the documented project state (docs-only; offline, no heavy deps).
 
-Written at the Week-3 closeout and advanced at each subsequent closeout (currently Week 4) so
+Written at the Week-3 closeout and advanced at each subsequent closeout (currently Week 5) so
 the docs cannot silently drift from reality:
-- docs/TEN_WEEK_PLAN.md: exactly Weeks 1-4 ticked, Weeks 5-10 + Stretch untouched. The count is
+- docs/TEN_WEEK_PLAN.md: exactly Weeks 1-5 ticked, Weeks 6-10 + Stretch untouched. The count is
   exact and adversarial — a single stray "[x]" anywhere later in the plan fails the suite, so
   nobody can quietly claim future work as done.
 - handoff.md: the 2026-08-29 Week-3 closeout entry is preserved verbatim in the history (looked
@@ -30,9 +30,15 @@ def _plan_sections() -> dict[str, str]:
     return dict(zip(headings, bodies, strict=True))
 
 
-def test_plan_weeks_1_to_4_fully_checked():
+def test_plan_weeks_1_to_5_fully_checked():
     # Per-week minimum item counts guard against a week losing checklist items outright.
-    for week, min_items in {"Week 1": 4, "Week 2": 3, "Week 3": 3, "Week 4": 2}.items():
+    for week, min_items in {
+        "Week 1": 4,
+        "Week 2": 3,
+        "Week 3": 3,
+        "Week 4": 2,
+        "Week 5": 3,
+    }.items():
         sections = _plan_sections()
         heading = next(h for h in sections if h.startswith(week))
         body = sections[heading]
@@ -40,13 +46,13 @@ def test_plan_weeks_1_to_4_fully_checked():
         assert body.count("- [x]") >= min_items, f"{week} lost checklist items"
 
 
-def test_plan_weeks_5_plus_and_stretch_all_unchecked():
-    # Adversarial exact count: the plan has precisely 12 ticked boxes (4+3+3+2 for Weeks 1-4).
-    # Any extra "[x]" — in Week 5-10, Stretch, or a sneaky duplicate — fails here.
-    assert PLAN.count("- [x]") == 12
+def test_plan_weeks_6_plus_and_stretch_all_unchecked():
+    # Adversarial exact count: the plan has precisely 15 ticked boxes (4+3+3+2+3 for Weeks 1-5).
+    # Any extra "[x]" — in Week 6-10, Stretch, or a sneaky duplicate — fails here.
+    assert PLAN.count("- [x]") == 15
     sections = _plan_sections()
-    later = [h for h in sections if re.match(r"Week ([5-9]|10) ", h) or "Stretch" in h]
-    assert len(later) == 7  # Weeks 5..10 + Stretch — all present, none deleted to game the count
+    later = [h for h in sections if re.match(r"Week ([6-9]|10) ", h) or "Stretch" in h]
+    assert len(later) == 6  # Weeks 6..10 + Stretch — all present, none deleted to game the count
     for heading in later:
         assert "- [x]" not in sections[heading], f"'{heading}' has a prematurely ticked box"
         assert "- [ ]" in sections[heading], f"'{heading}' lost its checklist"

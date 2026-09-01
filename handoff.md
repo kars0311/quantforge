@@ -5,6 +5,74 @@ Newest entry first.
 
 ---
 
+## 2026-08-31 — Week 5 complete: portfolio layer + Streamlit UI shell (`build-verified` workflow)
+
+**Status: Week 5 complete and green.** `ruff check .` clean; `pytest` **428 passed / 2 skipped**
+(437 passed / 2 skipped after the closeout verifier's own suite
+`test_week5_closeout_verifier.py` landed following this entry, matching the week-4 precedent;
+baseline at run start was 304 passed / 2 skipped; growth is the three new week-5 suites plus
+the workflow verifiers' proving suites `test_verify_week5_optimize.py` /
+`test_verify_week5_frontier.py` / `test_portfolio_combination_verifier.py` /
+`test_app_shell_verifier.py`; the 2 skips are the unchanged wk 8–9 stubs). All three Week-5
+boxes in `docs/TEN_WEEK_PLAN.md` are ticked. **Uncommitted** — commit pending Kent's approval
+(see open items).
+
+### What was built this run
+
+1. **`src/quantforge/portfolio/optimize.py`** (stub → working) — `optimize_weights` (pypfopt
+   mean-variance with textbook estimators — `mean_historical_return` + `sample_cov`, 252-day
+   annualization — max_sharpe/min_volatility, long-only bounds, Σw = 1 within 1e-8, whitelist
+   param validation with named `ValueError`s, inputs never mutated), `frontier` (min-vol-anchored
+   target-return sweep, fresh `EfficientFrontier` per point, (risk, ret) frame self-validated
+   against the interchange `frontier` kind), and `combine_returns` (label-aligned fixed-weight
+   blend named "portfolio"; rejects |Σw − 1| > 1e-8 rather than silently renormalizing). Both
+   optimizer entry points share one `_estimate_moments` helper so they can never drift onto
+   different estimators — deliberately kept to textbook defaults for the week-6 R cross-check.
+2. **`tests/test_portfolio_optimize.py`** (48 tests) — Σ/bounds invariants for both objectives;
+   min-vol pinned to an in-test closed-form 2-asset solution; `combine_returns` vs hand-computed
+   blends at 1e-12; every rejection class message-matched; interchange `weights`/`frontier`
+   validation + Parquet round-trips; determinism and no-mutation proofs.
+3. **`tests/test_portfolio_combination.py`** (13 tests) — FR-4 end-to-end through frozen
+   interfaces only (zero production-code change): momentum + mean-reversion via the `STRATEGIES`
+   registry → `PythonEngine` (cost_bps=10) → inner-joined panel → `optimize_weights` →
+   `combine_returns` → `compute_metrics`; blend equals a plain-numpy dot product at 1e-12;
+   convex-blend vol ≤ max individual vol; split discipline (all dates ≤ validation end,
+   holdout untouched).
+4. **`app/streamlit_app.py`** (stub → week-5 shell) + **`tests/test_app_shell.py`** (16 tests) —
+   sidebar config (UNIVERSE tickers, date pickers hard-bounded to train+validation so the
+   holdout is unselectable, `PARAM_WHITELIST`-driven param controls, cost_bps, Python-only
+   engine selector); tabs Backtest · Portfolio · Methodology live against cached Parquet
+   (`run_pipeline` under `st.cache_data`; refuses to download — cache must be primed outside the
+   UI), AI Chat · Research mode as labeled placeholders for weeks 7/8 with zero `quantforge.ai`
+   imports (subprocess-proven); pure Plotly builders (equity vs shift-consistent equal-weight
+   benchmark, drawdown, frontier with max-Sharpe star); `render_metrics` iterates exactly
+   `metrics/performance._KEYS`. Full-script `streamlit.testing.v1.AppTest` runs with zero
+   exceptions; manual headless boot served HTTP 200.
+
+### Agent failures and resolutions
+
+None — all four build milestones and their independent verifier suites completed and returned
+green on the first pass; no stalls, retries, or manual verifications were needed this run. The
+docs-closeout milestone (this entry) also advanced the week-3/week-4 closeout verifiers' plan
+and handoff pins to the week-5 state, per the precedent recorded in the 2026-08-30 entry.
+
+### Open items (carried forward)
+
+1. Deferred to week 6 (before schema freeze): R-side Parquet read check
+   (`Rscript -e 'arrow::read_parquet(...)'` on a written prices file).
+2. **Next rigor item (week 6):** R PortfolioAnalytics cross-check of the Python optimizer
+   results — weights and achieved vol within ~1% (RG-6). Until it lands, the RG-6 portion of
+   `docs/components/07-portfolio.md`'s done-when is explicitly NOT met (stated in that doc);
+   the optimizer is single-implementation verified only.
+3. Commit Week 5 (portfolio layer + UI shell + suites + doc sync) once Kent approves — per repo
+   practice, commits happen only with his explicit approval.
+
+**Next up: Week 6 — R analytics layer** (`analytics_r/tearsheet.R` reading the Parquet
+hand-off; tidyquant + PerformanceAnalytics tearsheet; PortfolioAnalytics as the second
+optimizer for the cross-check).
+
+---
+
 ## 2026-08-30 — Week 4 complete: mean-reversion + frozen seam (`build-verified` workflow)
 
 **Status: Week 4 complete and green.** `ruff check .` clean; `pytest` **304 passed / 2 skipped**

@@ -1,6 +1,16 @@
 # Component 14 — `app/streamlit_app.py` (interactive UI)
 
-**Weeks:** 5 (shell) → 9 (complete) · **Status:** stub shell · **Depends on:** everything upstream
+**Weeks:** 5 (shell) → 9 (complete) · **Status:** shell built (week-5 slice) · **Depends on:** everything upstream
+
+**Week-5 slice — tabs live vs placeholder:** **Backtest** (sidebar config → cached pipeline →
+equity-vs-benchmark, drawdown, metrics row) and **Portfolio** (both vetted strategies →
+`optimize_weights` / `frontier` / `combine_returns` → weights table + frontier chart + combined
+equity/metrics) are **live** against cached Parquet data; **Methodology** renders the real rigor
+notes (static text, no later-week dependency). **AI Chat** and **Research mode** are labeled
+**placeholders** until weeks 7/8 — the module imports nothing from `quantforge.ai` (proven by
+`tests/test_app_shell.py`). Engine selector offers Python only; R (week 6+) and KNIME (stretch)
+appear as labeled-disabled captions. Scenario buttons, passcode gate, and budget display are
+week-9 work and not yet present.
 
 ## Function
 

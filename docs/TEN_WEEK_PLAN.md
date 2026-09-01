@@ -24,9 +24,9 @@ flexible home internship — the timeline can stretch a little rather than cutti
 - [x] Refactor strategies + engine behind the `Strategy`/`Engine` interfaces (`engine/base.py`). Freeze the interface.
 
 ## Week 5 — Portfolio layer + UI shell
-- [ ] PyPortfolioOpt mean-variance + efficient frontier (`portfolio/optimize.py`).
-- [ ] Combine strategies into a portfolio.
-- [ ] Stand up the Streamlit shell + core charts (build the UI incrementally from here).
+- [x] PyPortfolioOpt mean-variance + efficient frontier (`portfolio/optimize.py`).
+- [x] Combine strategies into a portfolio.
+- [x] Stand up the Streamlit shell + core charts (build the UI incrementally from here).
 
 ## Week 6 — R analytics/risk layer (core; first polyglot interop)
 - [ ] `analytics_r/tearsheet.R`: read the Parquet hand-off; tidyquant + PerformanceAnalytics tearsheet.
