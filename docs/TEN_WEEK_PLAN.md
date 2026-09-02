@@ -29,9 +29,12 @@ flexible home internship — the timeline can stretch a little rather than cutti
 - [x] Stand up the Streamlit shell + core charts (build the UI incrementally from here).
 
 ## Week 6 — R analytics/risk layer (core; first polyglot interop)
-- [ ] `analytics_r/tearsheet.R`: read the Parquet hand-off; tidyquant + PerformanceAnalytics tearsheet.
-- [ ] PortfolioAnalytics as a second optimizer; cross-check vs Python (within tolerance).
-- [ ] (Pressure-test the stats methodology with the rigor advisor.)
+- [x] `analytics_r/tearsheet.R`: read the Parquet hand-off; tidyquant + PerformanceAnalytics tearsheet.
+- [x] PortfolioAnalytics as a second optimizer; cross-check vs Python (within tolerance).
+- [x] (Pressure-test the stats methodology with the rigor advisor.) — satisfied by the written
+      "Cross-language conventions and caveats" notes in `docs/components/08-r-tearsheet.md`
+      (population vs sample std, ANN=252, risk-free 0, min-variance cross-check objective,
+      tolerance rationale).
 
 ## Week 7 — MCP + natural-language interface
 - [ ] `ai/mcp_server.py`: expose `load_data` / `run_backtest` / `optimize_portfolio` / `get_metrics`.

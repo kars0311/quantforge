@@ -5,6 +5,82 @@ Newest entry first.
 
 ---
 
+## 2026-09-01 — Week 6 complete: R analytics layer + polyglot cross-check (`build-verified` workflow)
+
+**Status: Week 6 complete and green.** `ruff check .` clean; fresh full `pytest` at closeout:
+**488 passed / 2 skipped** (baseline at run start was 437 passed / 2 skipped; growth is the
+week-6 R suites plus the workflow verifiers' proving suites — the final +4 over the last
+builder milestone's 484 is `test_r_cross_check_verifier.py` landing after that count; the 2
+skips are the unchanged wk 8–9 stubs). All three Week-6 boxes in `docs/TEN_WEEK_PLAN.md` are
+ticked — the third ("pressure-test the stats methodology") is satisfied by the new
+"Cross-language conventions and caveats" section in `docs/components/08-r-tearsheet.md`.
+**Uncommitted** — commit pending Kent's approval (see open items).
+
+**CI caveat:** every R-dependent suite `skipif`s when `Rscript` or the required R packages
+(arrow, xts, tidyquant, PerformanceAnalytics, PortfolioAnalytics, ROI, ROI.plugin.quadprog)
+are absent — so the RG-6 cross-check is **machine-local**: it executes fully on this machine
+(all 488 pass with zero R skips locally) but skips in bare CI. The counts above are from this
+machine with the full R stack installed.
+
+### What was built this run
+
+1. **`tests/test_r_interchange.py`** — Python → R → Python Parquet round trip certifying the
+   week-1 `SCHEMAS` dict as the frozen cross-language contract: R (`arrow`) reads a
+   `write_frame` file, asserts schema/tz via named `stopifnot`s, writes it back; Python
+   re-validates and matches dates exactly (ns-UTC) and floats to 1e-12. Includes a
+   guard-the-guard test proving the R-side assertions can actually fail.
+2. **`analytics_r/tearsheet.R`** (stub → complete) — one linear, heavily commented headless
+   Rscript (each step annotated with its Python equivalent): CLI + loud boundary validation
+   mirroring `interchange.validate_frame`; `compute_metrics_r` transcribing the six `_KEYS`
+   with Python's exact conventions (ANN=252, risk-free 0, population std via
+   `sd(r)*sqrt((n-1)/n)`, n=1 edge matched); PNG tearsheet via
+   `charts.PerformanceSummary` (file device, headless) + display-only
+   `table.AnnualizedReturns`/`table.Drawdowns`; PortfolioAnalytics/ROI/quadprog long-only
+   full-investment **min-variance** second optimizer; writes `metrics_r.parquet` and
+   `weights_r.parquet` in interchange kinds. Every failure path exits non-zero with a named
+   diagnostic and no partial artifacts.
+3. **`tests/test_r_cross_check.py`** — the RG-6 proof: real pipeline (both vetted strategies →
+   `PythonEngine` → panel → `optimize_weights`) handed to `Rscript` via the interchange files;
+   metrics asserted at both ~1% (the RG-6 contract) **and** ~1e-9 (transcription agreement);
+   min-variance weights within 1% per asset (observed ~5e-6) and achieved annualized vol
+   within 1% relative of PyPortfolioOpt's.
+4. **Verifier suites** (independent agents, adversarial): `test_r_interchange_verifier.py`,
+   `test_r_tearsheet_verifier.py`, `test_r_tearsheet_png_verifier.py`,
+   `test_r_tearsheet_weights_verifier.py`, `test_r_cross_check_verifier.py` — hand-computed
+   metric values, closed-form 2-asset optimum, failure-path diagnostics, PNG/table output.
+5. **Docs closeout (this entry)** — Week-6 plan boxes ticked; methodology pressure-test notes
+   ("Cross-language conventions and caveats") added to `docs/components/08-r-tearsheet.md`
+   with a pointer from README's "Methodology and known limitations"; `08-r-tearsheet.md`
+   status stub → built/green; `07-portfolio.md`'s "RG-6 NOT met" caveat flipped to done;
+   `16-tests.md` inventory updated (R rows green wk 6); the week-3/4/5 closeout verifiers'
+   plan/handoff pins advanced to the week-6 state, per precedent. Environment prep along the
+   way: `ROI.plugin.quadprog` installed from CRAN.
+
+### Agent failures and resolutions
+
+None — all five build milestones and their independent verifier suites completed and returned
+green on the first pass; no stalls, retries, or manual verifications were needed this run.
+
+### Open items (carried forward)
+
+1. **Resolved this run (long-carried since week 1): R-side Parquet read check.** The item
+   asked for `Rscript -e 'arrow::read_parquet(...)'` on a written file; delivered as the
+   stronger `tests/test_r_interchange.py` full round trip (R reads, asserts, and re-writes;
+   Python re-validates) — the interchange schema is now certified from both languages and can
+   be treated as frozen for the polyglot boundary.
+2. Commit Week 6 (tearsheet.R + the six R suites + doc sync) once Kent approves — per repo
+   practice, commits happen only with his explicit approval.
+3. CI note (informational, not a defect): the R cross-check runs only where the R stack is
+   installed (see the caveat above); bare CI exercises the Python-side suites and skips the R
+   ones with named `skipif` reasons.
+
+**Next up (per docs/TEN_WEEK_PLAN.md): Week 7 — MCP + natural-language interface**
+(`ai/mcp_server.py` exposing `load_data`/`run_backtest`/`optimize_portfolio`/`get_metrics`;
+`ai/nl_interface.py` Claude tool-use; `ai/budget.py` caps + `ai/guardrails.py` wired from
+day one).
+
+---
+
 ## 2026-08-31 — Week 5 complete: portfolio layer + Streamlit UI shell (`build-verified` workflow)
 
 **Status: Week 5 complete and green.** `ruff check .` clean; `pytest` **428 passed / 2 skipped**

@@ -2,23 +2,26 @@
 
 Independently proves the closeout's four deliverables so none can silently regress:
 
-- docs/TEN_WEEK_PLAN.md: all three Week-5 boxes ticked and named, exactly 15 ticked overall,
-  Weeks 6-10 + Stretch untouched.
-- docs/components/07-portfolio.md: status advanced off "stub" AND the RG-6 R cross-check is
-  *explicitly* stated as deferred/not-done — the doc may not silently claim the full done-when.
+- docs/TEN_WEEK_PLAN.md: all three Week-5 boxes ticked and named, exactly 18 ticked overall
+  (pins advanced at the Week-6 closeout, per precedent), Weeks 7-10 + Stretch untouched.
+- docs/components/07-portfolio.md: status advanced off "stub" AND the RG-6 R cross-check state
+  is explicit — as of week 6 it must be stated as *landed* (with the machine-local caveat),
+  never silently omitted and never regressed back to the pre-week-6 "NOT done" wording.
 - docs/components/14-streamlit-app.md: status "shell built", with the live tabs (Backtest,
   Portfolio, Methodology) and the placeholders (AI Chat, Research mode) each named as such.
 - docs/components/16-tests.md: the week-5 suites listed green — and, adversarially, every test
   file the inventory claims exists must actually exist in tests/ (no phantom suites).
-- handoff.md: the newest entry is the dated 2026-08-31 Week-5 closeout, sitting *above* the
-  2026-08-30 entry, carrying the exact gate counts recorded at closeout, the two week-6 open
-  items (R-side Parquet read check; R cross-check of optimizer results), the commit-pending
-  item, and "Week 6 — R analytics layer" as next. Entry dates must be strictly newest-first.
+- handoff.md: the 2026-08-31 Week-5 closeout entry is preserved in the history (looked up by
+  content, not position, so later closeouts can prepend on top — the week-3/4 precedent),
+  sitting *above* the 2026-08-30 entry, carrying the exact gate counts recorded at closeout,
+  the two week-6 open items (R-side Parquet read check; R cross-check of optimizer results),
+  the commit-pending item, and "Week 6 — R analytics layer" as next. Entry dates must be
+  strictly newest-first.
 
 Adversarial cases: a single stray "[x]" anywhere later in the plan fails the exact-count pin;
 a doc row claiming a green suite whose file is missing fails the inventory sweep; a handoff
-entry prepended out of date order (or the Week-5 entry demoted below Week 4) fails the ordering
-test; and the 07 doc claiming the R cross-check as done (dropping the NOT-done language) fails.
+entry prepended out of date order (or the Week-5 entry deleted from the history) fails; and
+the 07 doc regressing to the pre-week-6 "NOT done" caveat fails.
 """
 
 import re
@@ -59,14 +62,15 @@ def test_plan_week5_all_three_items_ticked_and_named():
     assert "Streamlit shell" in body
 
 
-def test_plan_exactly_15_ticked_and_weeks_6_plus_untouched():
-    # Adversarial exact count: 4+3+3+2+3 for Weeks 1-5 — a stray tick anywhere later in the
-    # file (or an untick earlier) fails here.
-    assert _PLAN.count("- [x]") == 15
-    for week, n in {"Week 1": 4, "Week 2": 3, "Week 3": 3, "Week 4": 2, "Week 5": 3}.items():
+def test_plan_exactly_18_ticked_and_weeks_7_plus_untouched():
+    # Adversarial exact count: 4+3+3+2+3+3 for Weeks 1-6 (pin advanced at the week-6
+    # closeout) — a stray tick anywhere later in the file (or an untick earlier) fails here.
+    assert _PLAN.count("- [x]") == 18
+    weeks = {"Week 1": 4, "Week 2": 3, "Week 3": 3, "Week 4": 2, "Week 5": 3, "Week 6": 3}
+    for week, n in weeks.items():
         body = _plan_section(week)
         assert body.count("- [x]") == n and "- [ ]" not in body
-    for later in ("Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Stretch"):
+    for later in ("Week 7", "Week 8", "Week 9", "Week 10", "Stretch"):
         body = _plan_section(later)
         assert "- [x]" not in body, f"{later} has a prematurely ticked box"
         assert "- [ ]" in body, f"{later} lost its checklist"
@@ -85,16 +89,19 @@ def test_portfolio_doc_status_working_not_stub():
     assert "working" in status.lower()
 
 
-def test_portfolio_doc_explicitly_defers_r_cross_check():
-    # The done-when includes an RG-6 R cross-check the repo cannot run until week 6. The doc
-    # must say so out loud rather than silently claiming full done — both in the status line
-    # and in the body, with the not-done wording intact.
-    assert "deferred to week 6" in _status_line(_DOC_PORTFOLIO).lower()
-    assert re.search(r"NOT done", _DOC_PORTFOLIO), (
-        "07-portfolio.md no longer states the R cross-check is NOT done"
+def test_portfolio_doc_r_cross_check_state_explicit():
+    # Week-5 state: the doc explicitly said the RG-6 R cross-check was NOT done. Week-6 pin
+    # advance: the cross-check landed, so the doc must now say so explicitly — status line
+    # names the landing, the body names the proving suite — and the stale pre-week-6 "NOT
+    # done"/"single-implementation" caveat must be gone (not merely contradicted elsewhere).
+    assert "landed wk 6" in _status_line(_DOC_PORTFOLIO).lower()
+    assert "cross-check is done" in _DOC_PORTFOLIO
+    assert "test_r_cross_check.py" in _DOC_PORTFOLIO
+    assert not re.search(r"NOT done", _DOC_PORTFOLIO), (
+        "07-portfolio.md still carries the pre-week-6 'NOT done' RG-6 caveat"
     )
-    assert "single-implementation" in _DOC_PORTFOLIO, (
-        "the single-implementation-verified caveat was dropped"
+    assert "single-implementation" not in _DOC_PORTFOLIO, (
+        "stale single-implementation-verified caveat survived the week-6 flip"
     )
 
 
@@ -152,9 +159,12 @@ def _handoff_entries() -> list[tuple[str, str]]:
     return out
 
 
-def test_handoff_newest_entry_is_week5_and_dates_descend():
+def test_handoff_week5_entry_preserved_and_dates_descend():
     entries = _handoff_entries()
-    assert entries[0][0] == "2026-08-31" and "Week 5" in entries[0][1]
+    # Looked up by content, not position (week-3/4 precedent): later closeouts prepend on top.
+    assert any(d == "2026-08-31" and "Week 5" in b for d, b in entries), (
+        "the 2026-08-31 Week-5 closeout entry was deleted from the handoff history"
+    )
     # Adversarial ordering pin: an entry prepended out of order (or the Week-5 entry demoted
     # below the 2026-08-30 one) breaks the newest-first contract AGENTS.md requires.
     dates = [d for d, _ in entries]
@@ -163,7 +173,7 @@ def test_handoff_newest_entry_is_week5_and_dates_descend():
 
 
 def test_handoff_week5_entry_contents():
-    body = _handoff_entries()[0][1]
+    body = next(b for d, b in _handoff_entries() if d == "2026-08-31" and "Week 5" in b)
     # Gate results recorded at closeout, by exact count, plus the ruff status.
     assert "428 passed / 2 skipped" in body
     assert "ruff" in body.lower() and "clean" in body.lower()

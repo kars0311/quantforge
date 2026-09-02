@@ -1,7 +1,7 @@
 # Component 16 — `tests/` (correctness, rigor, and safety proof)
 
-**Weeks:** continuous (milestones 3, 6, 8, 9) · **Status:** wk 1–5 suites green; 2 later-week
-suites skipped (wk 8–9)
+**Weeks:** continuous (milestones 3, 6, 8, 9) · **Status:** wk 1–6 suites green; 2 later-week
+suites skipped (wk 8–9); R-dependent wk-6 suites `skipif` where Rscript/R packages are absent
 
 ## Function
 
@@ -30,7 +30,9 @@ All tests run offline — network-dependent paths use committed fixtures or mock
 | `test_portfolio_combination.py` | FR-4 end-to-end: both vetted strategies → engine → 2-col return panel → `optimize_weights` → `combine_returns` → `compute_metrics`, all via frozen interfaces; blend equals a plain-numpy dot product at 1e-12; convex-blend vol ≤ max individual vol; split discipline (no holdout dates) | FR-4, RG-4 | ✅ green (wk 5) |
 | `test_app_shell.py` | UI shell headless: import pulls no `quantforge.ai.*`; chart builders pinned to hand computations (benchmark equity no-look-ahead, drawdown ≤ 0); date pickers bounded to train+val with holdout unselectable; param controls introspect `PARAM_WHITELIST` live; full-script `AppTest` run with zero exceptions | FR-10, RG-4, AR-1 | ✅ green (wk 5) |
 | `test_verify_week5_optimize.py` / `test_verify_week5_frontier.py` / `test_portfolio_combination_verifier.py` / `test_app_shell_verifier.py` / `test_week5_closeout_verifier.py` | independent verifier suites (build-verified workflow): re-prove the week-5 milestones (and the docs-closeout state) with adversarial cases written by a separate agent | FR-4, FR-10 | ✅ green (wk 5) |
-| `test_r_cross_check.py` (new) | subprocess `Rscript tearsheet.R` on a fixture; metrics + weights within ~1% (`skipif` no Rscript/packages) | RG-6 | wk 6 |
+| `test_r_cross_check.py` | subprocess `Rscript tearsheet.R` on the real pipeline's hand-off; metrics asserted at both ~1% (RG-6 contract) and ~1e-9 (transcription), min-variance weights + achieved vol within 1% of PyPortfolioOpt (`skipif` no Rscript/packages — machine-local) | RG-6 | ✅ green (wk 6) |
+| `test_r_interchange.py` | Python → R → Python Parquet round trip: R reads and re-writes `write_frame` output, values survive exactly (dates ns-UTC, floats to 1e-12); R-side `stopifnot` guards proven able to fail (`skipif` no Rscript/arrow) | AR-2 | ✅ green (wk 6) |
+| `test_r_interchange_verifier.py` / `test_r_tearsheet_verifier.py` / `test_r_tearsheet_png_verifier.py` / `test_r_tearsheet_weights_verifier.py` / `test_r_cross_check_verifier.py` | independent verifier suites (build-verified workflow): re-prove the week-6 R milestones adversarially — hand-computed metric values, failure-path diagnostics with no partial artifacts, PNG/table output, closed-form 2-asset optimum (`skipif` without R) | RG-6, AR-2/AR-3 | ✅ green (wk 6) |
 | `test_budget.py` (new) | caps at boundary, UTC rollover, kill-switch, fail-closed, persistence | SF-1/SF-2 | wk 7 |
 | `test_mcp_tools.py` (new) | per-tool happy path + rejections (bad ticker, range, params, unknown handle, **holdout dates**) | FR-7, SF-7 | wk 7 |
 | `test_holdout_isolation.py` | handle opacity (no attribute/repr leak), single-use scoring, tool-level date clamp | SF-8, RG-4 | skipped → wk 8 |

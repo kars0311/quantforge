@@ -88,6 +88,14 @@ dedicated test where one exists; the custom engine is additionally validated aga
 - **Short borrow fees are not modeled (known limitation).** Short positions are charged turnover
   costs like any trade, but the ongoing cost of borrowing shares is ignored, so long–short results
   are slightly optimistic ([`docs/components/04-python-engine.md`](docs/components/04-python-engine.md)).
+- **Cross-language (Python ↔ R) conventions.** The R analytics layer transcribes Python's exact
+  metric definitions (population std, ANN=252, risk-free 0) rather than trusting library
+  defaults, and the optimizer cross-check deliberately uses the min-variance objective (unique
+  convex optimum). The full notes — including why the RG-6 tolerance is ~1% while the observed
+  agreement is ~1e-9, and why the PerformanceAnalytics display tables legitimately differ — live
+  in ["Cross-language conventions and caveats"](docs/components/08-r-tearsheet.md#cross-language-conventions-and-caveats)
+  in `docs/components/08-r-tearsheet.md`, proven by
+  [`tests/test_r_cross_check.py`](tests/test_r_cross_check.py).
 
 ## Quickstart
 

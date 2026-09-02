@@ -1,6 +1,6 @@
 # Component 07 — `src/quantforge/portfolio/optimize.py` (portfolio optimization)
 
-**Week:** 5 · **Status:** working (R cross-check deferred to week 6) · **Depends on:** metrics, interchange
+**Week:** 5 · **Status:** working (R cross-check landed wk 6) · **Depends on:** metrics, interchange
 
 ## Function
 
@@ -54,8 +54,15 @@ def combine_returns(returns: pd.DataFrame, weights: pd.Series) -> pd.Series
 `tests/test_portfolio_optimize.py` and `tests/test_portfolio_combination.py` (weights Σ=1
 within 1e-8 and long-only bounds; frontier risk monotone from the min-vol anchor; interchange
 `weights`/`frontier` emission via `write_frame` round-trips; strategy combination flows
-end-to-end into the UI's Portfolio tab). The **RG-6 R PortfolioAnalytics cross-check (~1%) is
-NOT done yet** — it is deliberately deferred to week 6 per `docs/TEN_WEEK_PLAN.md` (the R layer
-does not exist until then), which is exactly why this module sticks to textbook estimators the
-R side can reproduce. Until that check lands, treat the optimizer as single-implementation
-verified only.
+end-to-end into the UI's Portfolio tab).
+
+**Update (week 6): the RG-6 R PortfolioAnalytics cross-check is done.** `analytics_r/tearsheet.R`
+solves the same long-only full-investment minimum-variance problem via PortfolioAnalytics/ROI/
+quadprog, and `tests/test_r_cross_check.py` asserts per-asset weight agreement within 1% (observed
+~5e-6 — the residual is pypfopt's `clean_weights` rounding) and achieved annualized vol within 1%
+relative. Sticking to textbook estimators paid off exactly as intended: both libraries estimate
+the identical daily sample covariance, so the convex QP has one optimum for both to find. Why
+min-variance (not max-Sharpe) is the cross-check objective, and the tolerance rationale, are
+documented in `docs/components/08-r-tearsheet.md` ("Cross-language conventions and caveats").
+The check requires a local R installation with the PortfolioAnalytics stack — it runs on the
+development machine and `skipif`s in bare CI.
