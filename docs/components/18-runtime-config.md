@@ -1,6 +1,6 @@
 # Component 18 — `.env` / `.env.example` (runtime configuration)
 
-**Weeks:** 7–9 (vars land with their features) · **Status:** `.env.example` complete for week 7 (every variable below present with a comment; defaults confirmed against `budget.py` / `guardrails.py`); key still a placeholder in `.env`
+**Weeks:** 7–9 (vars land with their features) · **Status:** `.env.example` complete for week 7 and unchanged by week 8 (every variable below present with a comment; defaults confirmed against `budget.py` / `guardrails.py`; `ai/agent.py` reads no environment variable of its own — the SDK reads `ANTHROPIC_API_KEY`, the caps/kill-switch/PUBLIC_MODE are read by `budget`/`guardrails` on its behalf); key still a placeholder in `.env`
 
 ## Function
 

@@ -1,6 +1,6 @@
 # Component 10 — `src/quantforge/ai/guardrails.py` (overfitting + public-demo guardrails)
 
-**Weeks:** 7–9 · **Status:** built / green (wk 7) — `tests/test_guardrails.py`, `test_holdout_isolation.py` (guard level; the agent-loop clause lands in week 8 with `ai/agent.py`), `test_public_mode_no_codegen.py` · **Depends on:** budget, data/loader (split bounds), strategies (whitelist)
+**Weeks:** 7–9 · **Status:** built / green (wk 7) — `tests/test_guardrails.py`, `test_holdout_isolation.py` (guard level wk 7; the agent-loop clause landed in week 8 with `ai/agent.py`), `test_public_mode_no_codegen.py` · **Depends on:** budget, data/loader (split bounds), strategies (whitelist)
 
 ## Function
 
@@ -84,11 +84,13 @@ def assert_no_codegen(action: dict) -> None
   flat scalar param values; `code`/`source`/`python`/`eval`/`exec`/`file` keys fall out of
   that rule rather than a blocklist that could be evaded by renaming.
 - The agent-loop assertion in `test_holdout_isolation.py` (that `agent.run_research` never
-  touches the handle and the runner scores it once after the loop) is a **week-8** item,
-  landing with `ai/agent.py`; the week-7 tests prove the guard itself.
+  touches the handle and the runner scores it once after the loop) **landed in week 8** with
+  `ai/agent.py` (the `test_holdout_isolation.py` agent-loop tests: spied `split_data` /
+  `score_holdout` run once each, after the last model call; no holdout date, handle or metric
+  value in any request the model saw); the week-7 tests prove the guard itself.
 
 ## Done when
 
 - `test_holdout_isolation.py` and `test_public_mode_no_codegen.py` un-skipped and green;
-  rate-limit unit tests green. **Done (wk 7)** at guard level — the agent-loop clause is
-  added in week 8.
+  rate-limit unit tests green. **Done (wk 7)** at guard level; the agent-loop clause
+  **landed in week 8** (`test_holdout_isolation.py`, agent-loop tests, green).

@@ -1,13 +1,19 @@
 """Verifier tests pinning the Week-7 closeout state (docs/config milestone; offline, no network).
 
+Pins advanced at the Week-8 closeout, per precedent: the plan count, the handoff position, the
+16-tests status text and the guardrails-doc agent-loop wording now assert the week-8 state, and
+week-8 rows/entries are pinned alongside; every week-7 assertion is retargeted, not deleted.
+
 Independently proves the closeout's deliverables so none can silently regress:
 
-- docs/TEN_WEEK_PLAN.md: all three Week-7 boxes ticked and named; exactly 21 ticked overall
-  (4+3+3+2+3+3+3); Weeks 8-10 + Stretch untouched.
-- handoff.md: the newest entry is the 2026-09-10 Week-7 one with the exact gate counts
-  (879 passed / 1 skipped), the 488/2 baseline, ruff clean, "Agent failures", every open item
-  the spec demanded, and Week 8 as next; the Week-6 (488/2) and Week-5 (428/2) entries survive
-  below it; dates stay newest-first.
+- docs/TEN_WEEK_PLAN.md: all three Week-7 boxes ticked and named; exactly 24 ticked overall
+  (4+3+3+2+3+3+3+3, Weeks 1-8); Weeks 9-10 + Stretch untouched.
+- handoff.md: the newest entry is the 2026-09-11 Week-8 one (names ai/agent.py, run_research,
+  the three proof suites, its exact gate counts, the 919/1 week-7 baseline, the uncommitted /
+  approval note, and Week 9 as next); the 2026-09-10 Week-7 entry sits intact below it with its
+  exact gate counts (879 passed / 1 skipped), the 488/2 baseline, ruff clean, "Agent failures",
+  every open item the spec demanded, and Week 8 as next; the Week-6 (488/2) and Week-5 (428/2)
+  entries survive below; dates stay newest-first.
 - .env.example <-> docs/components/18-runtime-config.md: the variable inventories are *equal as
   sets* (not just table ⊆ file), every variable carries a comment, and every env key the
   `src/quantforge/ai/` modules actually read is in the table. `QUANTFORGE_LIVE_AI` is a
@@ -19,10 +25,13 @@ Independently proves the closeout's deliverables so none can silently regress:
   (never truncates) a window touching the holdout and registers nothing; `score_holdout`
   really lazy-imports the engine registry; `_call` really meters cache tokens.
 - docs/components/09/10/11/12/18: status lines off "stub", each with a "Decisions made in
-  build" list naming the four spec'd decisions; 10 defers the agent-loop clause to week 8.
+  build" list naming the four spec'd decisions; 10 records the agent-loop clause as landed in
+  week 8 (no longer pending); 13 is built/green (wk 8) with the built `run_research`
+  signature, which must match `inspect.signature` (a doc may not overclaim a kwarg).
 - docs/components/16-tests.md: the seven week-7 rows green, the verifier row names its
-  suites, the status line advanced to "wk 1-7", and every test file the inventory names
-  exists (a phantom row fails).
+  suites, a `test_agent.py` row and a week-8 verifier row exist, the status line advanced to
+  "wk 1-8" naming both opt-in live smokes, and every test file the inventory names exists (a
+  phantom row fails).
 - README: the "AI layer safety" paragraph in "Methodology and known limitations" points at
   budget/guardrails/nl_interface, the parameter-only rule, and the proving tests — and every
   link target in that section resolves to a real file (a dead link fails).
@@ -48,7 +57,7 @@ import pandas as pd
 import pytest
 
 from quantforge import interchange
-from quantforge.ai import budget, guardrails, mcp_server, nl_interface
+from quantforge.ai import agent, budget, guardrails, mcp_server, nl_interface
 from quantforge.data import loader
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -62,6 +71,7 @@ _COMPONENT_DOCS = {
     name: (_ROOT / "docs" / "components" / f"{name}.md").read_text()
     for name in ("09-ai-budget", "10-ai-guardrails", "11-mcp-server", "12-nl-interface")
 }
+_DOC_AGENT = (_ROOT / "docs" / "components" / "13-ai-agent.md").read_text()
 
 # The spec's table inventory, spelled out so the test does not trust the doc it is checking.
 _SPEC_TABLE_VARS = {
@@ -129,11 +139,20 @@ def test_plan_week7_all_three_items_ticked_and_named():
     assert "ai/budget.py" in body and "ai/guardrails.py" in body
 
 
-def test_plan_exactly_21_ticked_and_weeks_8_plus_untouched():
-    # Adversarial exact count: 4+3+3+2+3+3+3 for Weeks 1-7 — a stray tick anywhere later in
-    # the file (or an untick earlier) fails here. Mirrors the spec's `grep -c` check.
-    assert _PLAN.count("- [x]") == 21
-    assert len(re.findall(r"^- \[x\]", _PLAN, flags=re.M)) == 21
+def test_plan_week8_all_three_items_ticked_and_named():
+    body = _plan_section("Week 8")
+    assert body.count("- [x]") == 3 and "- [ ]" not in body
+    assert "ai/agent.py" in body
+    assert "untouched holdout" in body
+    assert "tests/test_holdout_isolation.py" in body
+
+
+def test_plan_exactly_24_ticked_and_weeks_9_plus_untouched():
+    # Adversarial exact count: 4+3+3+2+3+3+3+3 for Weeks 1-8 (pin advanced at the week-8
+    # closeout) — a stray tick anywhere later in the file (or an untick earlier) fails here.
+    # Mirrors the spec's `grep -c` check.
+    assert _PLAN.count("- [x]") == 24
+    assert len(re.findall(r"^- \[x\]", _PLAN, flags=re.M)) == 24
     for week, n in {
         "Week 1": 4,
         "Week 2": 3,
@@ -142,34 +161,71 @@ def test_plan_exactly_21_ticked_and_weeks_8_plus_untouched():
         "Week 5": 3,
         "Week 6": 3,
         "Week 7": 3,
+        "Week 8": 3,
     }.items():
         body = _plan_section(week)
         assert body.count("- [x]") == n and "- [ ]" not in body, week
-    for later in ("Week 8", "Week 9", "Week 10", "Stretch"):
+    for later in ("Week 9", "Week 10", "Stretch"):
         body = _plan_section(later)
         assert "- [x]" not in body, f"{later} has a prematurely ticked box"
         assert "- [ ]" in body, f"{later} lost its checklist"
 
 
 # ---------------------------------------------------------------------------
-# handoff.md — the Week-7 closeout entry
+# handoff.md — the Week-8 closeout entry on top, the Week-7 entry intact below it
 # ---------------------------------------------------------------------------
 
 
-def test_handoff_newest_entry_is_week7_dated_2026_09_10_and_dates_descend():
+def _week7_entry() -> str:
+    """The 2026-09-10 Week-7 entry, looked up by date + content (not position) so later
+    closeouts can prepend on top without rewriting history."""
+    return next(b for d, b in _handoff_entries() if d == "2026-09-10" and "Week 7" in b)
+
+
+def test_handoff_newest_entry_is_week8_dated_2026_09_11_and_dates_descend():
+    # Pin advanced at the week-8 closeout: the newest entry is the Week-8 one; the Week-7 entry
+    # is directly below it, still starting with its original heading.
     entries = _handoff_entries()
     assert entries, "handoff.md has no dated entries"
     date, body = entries[0]
-    assert date == "2026-09-10"
-    assert "Week 7" in body
+    assert date == "2026-09-11"
+    assert "Week 8" in body
+    assert body.lstrip().startswith("## 2026-09-11 — Week 8 complete")
+    assert entries[1][0] == "2026-09-10"
+    # A stale "Week 8 next" line from the week-7 entry must not be mistaken for the new entry.
+    assert entries[1][1].lstrip().startswith("## 2026-09-10 — Week 7 complete")
     dates = [d for d, _ in entries]
     assert dates == sorted(dates, reverse=True), "handoff entries are not newest-first"
-    # A stale "Week 7 next" line from the week-6 entry must not be mistaken for the new entry.
-    assert body.lstrip().startswith("## 2026-09-10 — Week 7 complete")
+
+
+def test_handoff_week8_entry_gate_counts_modules_suites_open_items_and_next_target():
+    body = _handoff_entries()[0][1]
+    # Exact counts the closeout run produced (the spec: recorded verbatim), and the week-7
+    # baseline it started from.
+    assert "1186 passed / 2 skipped" in body
+    assert "919 passed / 1 skipped" in body
+    assert "ruff" in body.lower() and "clean" in body.lower()
+    # Both opt-in live smokes are named as the only skips.
+    assert "test_nl_interface.py::test_live_smoke" in body
+    assert "test_agent.py::test_live_smoke" in body
+    assert "QUANTFORGE_LIVE_AI" in body
+    # What was built, and the three proof suites.
+    assert "ai/agent.py" in body and "run_research" in body
+    assert "propose_experiment" in body and "declare_done" in body
+    for suite in ("test_agent.py", "test_holdout_isolation.py", "test_public_mode_no_codegen.py"):
+        assert suite in body, f"week-8 handoff entry does not name {suite}"
+    assert "Agent failures" in body
+    # Open items the spec demanded.
+    assert "uncommitted" in body.lower()
+    assert "pending" in body.lower() and "approv" in body.lower()
+    assert "ANTHROPIC_API_KEY" in body and "placeholder" in body
+    assert re.search(r"Research (tab|mode)", body) and re.search(r"[Ww]eek 9", body)
+    # Next target.
+    assert "Next up" in body and "Week 9" in body
 
 
 def test_handoff_week7_entry_gate_counts_and_baseline():
-    body = _handoff_entries()[0][1]
+    body = _week7_entry()
     # The spec's literal string, plus the exact number the closeout run produced.
     assert "passed / 1 skipped" in body
     assert "879 passed / 1 skipped" in body
@@ -180,7 +236,7 @@ def test_handoff_week7_entry_gate_counts_and_baseline():
 
 
 def test_handoff_week7_entry_names_modules_open_items_and_next_target():
-    body = _handoff_entries()[0][1]
+    body = _week7_entry()
     for module in ("ai/budget.py", "ai/guardrails.py", "ai/mcp_server.py", "ai/nl_interface.py"):
         assert module in body, f"handoff entry does not name {module}"
     for suite in (
@@ -205,13 +261,16 @@ def test_handoff_week7_entry_names_modules_open_items_and_next_target():
     assert "ai/agent.py" in body and "run_research" in body and "score_holdout" in body
 
 
-def test_handoff_week6_and_week5_entries_preserved_below():
-    # Prepending must not rewrite history: the week-6 and week-5 records keep their counts.
+def test_handoff_week7_week6_and_week5_entries_preserved_below():
+    # Prepending must not rewrite history: the week-7, week-6 and week-5 records keep their
+    # counts, in order, directly below the week-8 entry.
     entries = _handoff_entries()
-    assert entries[1][0] == "2026-09-01" and "Week 6" in entries[1][1]
-    assert "488 passed / 2 skipped" in entries[1][1]
+    assert entries[1][0] == "2026-09-10" and "Week 7" in entries[1][1]
+    assert "919 passed / 1 skipped" in entries[1][1]
+    assert entries[2][0] == "2026-09-01" and "Week 6" in entries[2][1]
+    assert "488 passed / 2 skipped" in entries[2][1]
     idx5 = next(i for i, (d, b) in enumerate(entries) if d == "2026-08-31" and "Week 5" in b)
-    assert idx5 > 1
+    assert idx5 > 2
     assert "428 passed / 2 skipped" in entries[idx5][1]
 
 
@@ -440,15 +499,51 @@ def test_component_docs_record_the_four_spec_decisions():
         assert "ENGINES" in decisions[name] and re.search(r"laz(y|ily)", decisions[name]), name
 
 
-def test_guardrails_doc_defers_agent_loop_clause_to_week8():
+def test_guardrails_doc_records_agent_loop_clause_landed_in_week8():
+    # Pin advanced at the week-8 closeout: the doc used to defer the agent-loop clause to
+    # week 8; now it must say the clause landed there (past tense), and nowhere still pending.
     doc = _COMPONENT_DOCS["10-ai-guardrails"]
     status = _status_line(doc)
     assert "test_holdout_isolation.py" in status and "week 8" in status
     assert "agent-loop" in doc and "week-8" in doc.lower().replace(" ", "-")
+    assert "landed in week 8" in status
+    assert "landed in week 8" in " ".join(doc.split())
+    for stale in ("lands in week 8", "is added in week 8", "is a **week-8** item", "pending"):
+        assert stale not in doc, f"10-ai-guardrails.md still says {stale!r}"
     # No doc in the set still describes the old clamp behaviour.
     for name, text in _COMPONENT_DOCS.items():
         assert "load_data clamps" not in text, f"{name} still says load_data clamps"
-    assert "clamps" not in (_ROOT / "docs" / "components" / "13-ai-agent.md").read_text()
+    assert "clamps" not in _DOC_AGENT
+
+
+def test_agent_doc_status_built_green_wk8_with_decisions_and_the_built_signature():
+    status = _status_line(_DOC_AGENT)
+    assert "stub" not in status.lower()
+    assert "built / green (wk 8)" in status
+    for suite in ("test_agent.py", "test_holdout_isolation.py", "test_public_mode_no_codegen.py"):
+        assert suite in status
+    assert "## Decisions made in build" in _DOC_AGENT
+    decisions = " ".join(_doc_section(_DOC_AGENT, "## Decisions made in build").split())
+    assert "propose_experiment" in decisions and "declare_done" in decisions
+    assert "strict" in decisions and "validate_params" in decisions
+    assert "claude-sonnet-5" in decisions and "public_mode" in decisions
+    # Stop vocabulary and result/record keys the doc advertises are the module's.
+    assert "api_error" in _DOC_AGENT
+    assert set(re.findall(r'"(converged|max_iters|budget|api_error)"', _DOC_AGENT)) == set(
+        agent.STOP_REASONS
+    )
+    # The Interface block's signature is the built one: a doc may not overclaim a kwarg.
+    interface = _doc_section(_DOC_AGENT, "## Interface")
+    params = inspect.signature(agent.run_research).parameters
+    assert list(params) == ["goal", "max_iters", "tickers", "engine", "cost_bps", "client"]
+    for name in ("tickers", "engine", "client", "cost_bps", "max_iters"):
+        assert re.search(rf"\b{name}\b", interface), f"interface block does not show {name}"
+    assert "public_mode" not in interface
+    assert params["max_iters"].default == guardrails.MAX_AGENT_ITERS
+    assert "MAX_AGENT_ITERS" in interface
+    # The live-run item is honestly marked pending the key, as in week 7.
+    done = _doc_section(_DOC_AGENT, "## Done when")
+    assert "pending" in done.lower() and "ANTHROPIC_API_KEY" in done
 
 
 # ---------------------------------------------------------------------------
@@ -478,8 +573,33 @@ def test_tests_doc_week7_rows_green(row_file):
 
 
 def test_tests_doc_holdout_isolation_row_guard_level_with_agent_clause_wk8():
+    # Pin advanced at the week-8 closeout: the clause is no longer forward-looking.
     row = _row("test_holdout_isolation.py")
     assert "green (wk 7 guard-level" in row and "wk 8" in row
+    assert "agent-loop clause landed" in row
+    assert "run_research" in row and "score_holdout" in row
+
+
+def test_tests_doc_public_mode_row_mentions_the_agent_clause():
+    row = _row("test_public_mode_no_codegen.py")
+    assert "green (wk 7" in row and "wk 8" in row and "agent clause" in row
+
+
+def test_tests_doc_agent_row_present_green_wk8():
+    row = _row("test_agent.py")
+    assert "green (wk 8" in row
+    assert "FakeClient" in row
+    for req in ("FR-9", "SF-1", "SF-7", "SF-8", "RG-4"):
+        assert req in row, f"test_agent.py row lacks {req}"
+    for claim in ("holdout", "converged", "max_iters", "budget", "api_error", "test_live_smoke"):
+        assert claim in row, f"test_agent.py row does not mention {claim}"
+
+
+def test_tests_doc_week8_verifier_row_names_its_suites():
+    row = next(line for line in _DOC_TESTS.splitlines() if "test_agent_verify.py" in line)
+    for name in ("test_agent_run_research_verify.py", "test_week8_proof_suites_verify.py"):
+        assert name in row, f"week-8 verifier row does not name {name}"
+    assert "green (wk 8)" in row
 
 
 def test_tests_doc_week7_verifier_row_names_its_suites():
@@ -504,11 +624,14 @@ def test_tests_doc_every_named_file_exists():
         assert (_ROOT / "tests" / name).is_file(), f"16-tests.md names phantom suite {name}"
 
 
-def test_tests_doc_status_line_advanced_to_week7():
+def test_tests_doc_status_line_advanced_to_week8():
+    # Pin advanced at the week-8 closeout ("wk 1–7" -> "wk 1–8"; both live smokes named).
     head = "\n".join(_DOC_TESTS.splitlines()[:6])
     assert "**Status:**" in head
-    assert "wk 1–7" in head or "wk 1-7" in head
-    assert "only the" in head and "live-AI smoke test skips" in head
+    assert "wk 1–8" in head or "wk 1-8" in head
+    assert "only the" in head and "live-AI smoke tests skip" in head
+    assert "test_nl_interface.py::test_live_smoke" in head
+    assert "test_agent.py::test_live_smoke" in head
     assert "QUANTFORGE_LIVE_AI" in head
     assert "skipif" in head  # the machine-local R caveat survives
 
@@ -535,6 +658,12 @@ def test_readme_ai_layer_safety_paragraph_present_with_links_that_resolve():
     ):
         assert suite in para, f"README safety paragraph does not cite {suite}"
     assert "docs/components/18-runtime-config.md" in para
+    # Week-8 extension: the research agent's caps and the one-shot holdout, with its proofs.
+    assert "research agent" in para and "run_research" in para
+    assert "10-iteration cap" in para and "MAX_AGENT_ITERS" in para
+    assert re.search(r"\bonce\b", para) and "side by side" in para
+    assert "tests/test_agent.py" in para
+    assert guardrails.MAX_AGENT_ITERS == 10  # the README number is the constant
     # Every relative link in the whole section resolves to a real file (dead links fail).
     for target in re.findall(r"\]\(([^)#]+)(?:#[^)]*)?\)", section):
         if target.startswith(("http://", "https://")):

@@ -81,11 +81,11 @@ def test_plan_week6_pressure_test_annotated_as_satisfied_by_notes():
     assert "08-r-tearsheet.md" in third
 
 
-def test_plan_exactly_21_ticked_and_weeks_8_plus_untouched():
-    # Adversarial exact count: 4+3+3+2+3+3+3 for Weeks 1-7 (pin advanced at the week-7
+def test_plan_exactly_24_ticked_and_weeks_9_plus_untouched():
+    # Adversarial exact count: 4+3+3+2+3+3+3+3 for Weeks 1-8 (pin advanced at the week-8
     # closeout, per precedent) — a stray tick anywhere later in the file (or an untick
     # earlier) fails here.
-    assert _PLAN.count("- [x]") == 21
+    assert _PLAN.count("- [x]") == 24
     for week, n in {
         "Week 1": 4,
         "Week 2": 3,
@@ -94,10 +94,11 @@ def test_plan_exactly_21_ticked_and_weeks_8_plus_untouched():
         "Week 5": 3,
         "Week 6": 3,
         "Week 7": 3,
+        "Week 8": 3,
     }.items():
         body = _plan_section(week)
         assert body.count("- [x]") == n and "- [ ]" not in body
-    for later in ("Week 8", "Week 9", "Week 10", "Stretch"):
+    for later in ("Week 9", "Week 10", "Stretch"):
         body = _plan_section(later)
         assert "- [x]" not in body, f"{later} has a prematurely ticked box"
         assert "- [ ]" in body, f"{later} lost its checklist"
@@ -235,8 +236,8 @@ def test_tests_doc_status_line_advanced_to_week6():
     # The header status wraps across lines; check the doc's head, not one physical line.
     head = "\n".join(_DOC_TESTS.splitlines()[:6])
     assert "**Status:**" in head
-    # Pin advanced at the week-7 closeout ("wk 1–6" -> "wk 1–7"): the R caveat must survive.
-    assert "wk 1–7" in head or "wk 1-7" in head
+    # Pin advanced at each closeout ("wk 1–6" -> "wk 1–7" -> "wk 1–8"): the R caveat must survive.
+    assert "wk 1–8" in head or "wk 1-8" in head
     assert "skipif" in head  # the machine-local R caveat is stated up front
 
 
@@ -256,11 +257,13 @@ def _handoff_entries() -> list[tuple[str, str]]:
 
 
 def test_handoff_week6_entry_preserved_below_week7_and_dates_descend():
-    # Pin advanced at the week-7 closeout: the newest entry is now the 2026-09-10 Week-7 one and
-    # the Week-6 record must survive verbatim enough to keep its counts, directly below it.
+    # Pin advanced at the week-8 closeout: the newest entry is now the 2026-09-11 Week-8 one,
+    # the Week-7 entry sits below it, and the Week-6 record must survive verbatim enough to
+    # keep its counts, directly below that.
     entries = _handoff_entries()
-    assert entries[0][0] == "2026-09-10" and "Week 7" in entries[0][1]
-    assert entries[1][0] == "2026-09-01" and "Week 6" in entries[1][1]
+    assert entries[0][0] == "2026-09-11" and "Week 8" in entries[0][1]
+    assert entries[1][0] == "2026-09-10" and "Week 7" in entries[1][1]
+    assert entries[2][0] == "2026-09-01" and "Week 6" in entries[2][1]
     dates = [d for d, _ in entries]
     assert dates == sorted(dates, reverse=True), "handoff entries are not newest-first"
 

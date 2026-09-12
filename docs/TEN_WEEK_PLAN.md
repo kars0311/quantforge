@@ -42,9 +42,9 @@ flexible home internship — the timeline can stretch a little rather than cutti
 - [x] Wire `ai/budget.py` caps + `ai/guardrails.py` from day one (don't bolt on later).
 
 ## Week 8 — AI research agent (headline)
-- [ ] `ai/agent.py`: propose → backtest → read metrics → refine loop.
-- [ ] **Overfitting guardrails:** train / validation / **untouched holdout**, iteration cap, budget cap.
-- [ ] `tests/test_holdout_isolation.py`: prove the agent cannot read the holdout.
+- [x] `ai/agent.py`: propose → backtest → read metrics → refine loop.
+- [x] **Overfitting guardrails:** train / validation / **untouched holdout**, iteration cap, budget cap.
+- [x] `tests/test_holdout_isolation.py`: prove the agent cannot read the holdout.
 
 ## Week 9 — Finish UI + deploy + harden (mentor-assisted cloud)
 - [ ] AI chat panel + "Research mode" + **engine selector (Python / R / KNIME)**.

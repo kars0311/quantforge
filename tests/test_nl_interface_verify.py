@@ -35,7 +35,7 @@ import pandas as pd
 import pytest
 
 from quantforge import interchange, strategies
-from quantforge.ai import budget, guardrails, mcp_server, nl_interface
+from quantforge.ai import agent, budget, guardrails, mcp_server, nl_interface
 from quantforge.ai.budget import PRICES_PER_MTOK
 from quantforge.data import loader
 from quantforge.engine.base import Strategy
@@ -178,11 +178,15 @@ def test_every_messages_create_in_the_ai_package_is_inside_call():
         for p in AI_PKG.glob("*.py")
     }
     hits = {k: v for k, v in hits.items() if v}
-    assert list(hits) == ["nl_interface.py"], hits
-    assert len(hits["nl_interface.py"]) == 1
-    call_src = inspect.getsource(nl_interface._call)
-    assert "messages.create" in call_src
-    assert call_src.index("messages.create") < call_src.index("budget.charge(")
+    # Week 8 added the research agent, which has its own single metered ``_call`` site; every
+    # other module in the package must still make no SDK call at all.
+    metered = {"nl_interface.py": nl_interface._call, "agent.py": agent._call}
+    assert set(hits) == set(metered), hits
+    for name, call in metered.items():
+        assert len(hits[name]) == 1, hits
+        call_src = inspect.getsource(call)
+        assert "messages.create" in call_src
+        assert call_src.index("messages.create") < call_src.index("budget.charge(")
 
 
 # ---------------------------------------------------------------- check 3: golden path + ledger

@@ -109,6 +109,14 @@ dedicated test where one exists; the custom engine is additionally validated aga
   [`tests/test_holdout_isolation.py`](tests/test_holdout_isolation.py), and
   [`tests/test_budget.py`](tests/test_budget.py); the variable inventory lives in
   [`docs/components/18-runtime-config.md`](docs/components/18-runtime-config.md).
+  The **research agent** (`ai/agent.py`, `run_research`) iterates only on the train and
+  validation windows, under a hard **10-iteration cap on model calls** (`MAX_AGENT_ITERS`) and
+  the same budget gate on every call; when the loop ends, the *runner* — never the agent —
+  scores the winning configuration **once** on the holdout, and validation and holdout metrics
+  are reported side by side so a gap between them is visible rather than hidden. Proven by
+  [`tests/test_holdout_isolation.py`](tests/test_holdout_isolation.py) (the agent never touches
+  the holdout handle; the runner scores it exactly once after the loop) and
+  [`tests/test_agent.py`](tests/test_agent.py) (capped, metered loop with a mocked client).
 
 ## Quickstart
 

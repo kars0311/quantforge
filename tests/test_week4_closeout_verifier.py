@@ -63,15 +63,23 @@ def test_plan_week4_both_items_ticked_and_named():
 
 
 def test_plan_no_other_checkbox_changed():
-    # Weeks 1-3 stay fully ticked (4+3+3), Week 4 adds 2, Weeks 5-7 add 3 each — exactly 21 in
-    # the whole file (pin advanced at the week-7 closeout), so a stray tick anywhere later (or
+    # Weeks 1-3 stay fully ticked (4+3+3), Week 4 adds 2, Weeks 5-8 add 3 each — exactly 24 in
+    # the whole file (pin advanced at the week-8 closeout), so a stray tick anywhere later (or
     # an untick earlier) fails here.
-    assert _PLAN.count("- [x]") == 21
-    weeks = {"Week 1": 4, "Week 2": 3, "Week 3": 3, "Week 5": 3, "Week 6": 3, "Week 7": 3}
+    assert _PLAN.count("- [x]") == 24
+    weeks = {
+        "Week 1": 4,
+        "Week 2": 3,
+        "Week 3": 3,
+        "Week 5": 3,
+        "Week 6": 3,
+        "Week 7": 3,
+        "Week 8": 3,
+    }
     for week, n in weeks.items():
         body = _plan_section(week)
         assert body.count("- [x]") == n and "- [ ]" not in body
-    for later in ("Week 8", "Week 9", "Week 10", "Stretch"):
+    for later in ("Week 9", "Week 10", "Stretch"):
         body = _plan_section(later)
         assert "- [x]" not in body, f"{later} has a prematurely ticked box"
         assert "- [ ]" in body, f"{later} lost its checklist"

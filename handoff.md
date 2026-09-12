@@ -5,6 +5,121 @@ Newest entry first.
 
 ---
 
+## 2026-09-11 — Week 8 complete: AI research agent (build-verified workflow)
+
+**Status: Week 8 complete and green.** `ruff check .` clean; fresh full `pytest` at closeout:
+**1186 passed / 2 skipped** (baseline at run start was 919 passed / 1 skipped — the week-7
+closeout count; growth is `tests/test_agent.py` (98 tests), the agent-loop clause of
+`test_holdout_isolation.py` (9 → 15), the agent clause of `test_public_mode_no_codegen.py`
+(26 → 30), the three week-8 verifier suites, and the six week-8 pins added to
+`test_week7_closeout_verifier.py`). The two skips are the opt-in live-API smokes,
+`tests/test_nl_interface.py::test_live_smoke` and `tests/test_agent.py::test_live_smoke`,
+which run only with `QUANTFORGE_LIVE_AI=1`; the one pypfopt "solution may be inaccurate"
+warning in `test_mcp_tools_verify.py` is pre-existing and unrelated. After the week-8 closeout
+verifier (`tests/test_week8_closeout_verifier.py`, 22 tests: plan/handoff/doc pins, earlier
+handoff entries byte-identical to HEAD, per-suite counts against a real collection, a
+hand-computed budget-cap stop and a `max_iters` cut-off) landed, the final fresh run is
+**1208 passed / 2 skipped** (ruff clean); that verifier also corrected this entry's
+public-mode suite count (it is 26 → 30, not 27 → 31). All three Week-8 boxes in
+`docs/TEN_WEEK_PLAN.md` are ticked (24 total). Week 7 was committed as `6d128c4`;
+**Week 8 is uncommitted** — commit pending Kent's approval (see open items).
+
+### What was built this run
+
+1. **`src/quantforge/ai/agent.py`** (stub → complete) — `run_research(goal, *, max_iters=
+   guardrails.MAX_AGENT_ITERS, tickers=None, engine="python", cost_bps=10.0, client=None)`,
+   built from: a frozen `SYSTEM_RESEARCH` prompt assembled from constants (strategy names,
+   every whitelisted param with range/default, the train/validation bounds, the metric keys,
+   the "later data is a held-out test set you can never request" rule); the two proposal
+   tools `propose_experiment` / `declare_done` (`TOOLS`); `_call` — the module's single
+   `messages.create` site (three prompt-caching breakpoints: system, last tool, last message
+   block; `budget.estimate → allow → create → charge` with cache tokens billed at the full
+   input rate); `_run_experiment` (`assert_no_codegen` then `validate_params`, then
+   `mcp_server.run_backtest` on train then validation with the validated dict); `_select_best`
+   / `_best_record` (highest validation Sharpe, NaN → −inf, ties to the earliest iteration);
+   `_tool_result_text` (metrics-only JSON, no handles/ids/dates); `_research_loop` (one model
+   call per iteration, `STOP_REASONS = ("converged", "max_iters", "budget", "api_error")`,
+   corrective messages for text-only / extra / unknown tool turns, `declare_done` refused
+   until one proposal has succeeded); and `run_research` itself — all validation before any
+   spend, data entering only through `mcp_server.load_data` on the loader's fixed train and
+   validation bounds, the loop, then the **one-shot holdout scored by the runner after the
+   loop** (`guardrails.split_data` on the same `_price_source` panel filtered to the run's
+   tickers, `score_holdout` once; the handle is a local never stored in the result). Result
+   keys: `best`, `holdout_metrics`, `history`, `stopped_because`, `spend_usd`, `error`.
+   Model `claude-sonnet-5`; the stub's `public_mode` kwarg was dropped (PUBLIC_MODE is
+   environment-only, as in `nl_interface`).
+2. **Design decision — proposal tools, not the raw MCP tools.** The model calls
+   `propose_experiment {strategy, params, rationale}` and the runner executes
+   `mcp_server.run_backtest` on train then validation on its behalf, so one model call is
+   exactly one experiment and `MAX_AGENT_ITERS` caps `messages.create` calls (SF-7) rather
+   than a fuzzier "turn"; the pipeline is still driven only through the tool functions (the
+   agent imports no engine/portfolio code and instantiates no strategy). `strict` tool mode
+   was not used because `params` has optional per-strategy keys — the runner-side
+   `validate_params` gate is what makes a bad proposal fail before any handle is minted.
+   Recorded in `docs/components/13-ai-agent.md` "Decisions made in build (wk 8)".
+3. **Proof suites.** `tests/test_agent.py` (98 offline tests with a `FakeClient`,
+   `ANTHROPIC_API_KEY` unset: tool shapes, frozen prompt, exact metering, validation before
+   spend, every stop reason with its call/charge count, transcript shape, one-shot holdout,
+   result contract, PUBLIC_MODE run byte-identical to dev, + the opt-in live smoke);
+   `tests/test_holdout_isolation.py` **agent-loop clause landed** (spied `split_data` /
+   `score_holdout` run exactly once each and only after the last model call; no holdout
+   date / handle / metric value in any request; a prompt-injected goal cannot pull holdout
+   data through `load_data`; two runs mint two single-use handles; source has one
+   `score_holdout(` site); `tests/test_public_mode_no_codegen.py` **agent clause** (poisoned
+   `code`/`source` proposals refused before `run_backtest` or the engine run; the honest
+   proposal then runs train/validation/holdout with no code keys; agent source has no
+   `exec`/`eval`/`compile`/`importlib`/`subprocess`/`open(`).
+4. **Verifier suites** (independent agents, adversarial): `test_agent_verify.py`,
+   `test_agent_run_research_verify.py`, `test_week8_proof_suites_verify.py`.
+5. **Docs/status closeout (this entry)** — `13-ai-agent.md` status → built / green (wk 8) with
+   the built signature, `api_error`, the `error` fields and the decisions list, live-run item
+   marked pending the key; `10-ai-guardrails.md` now records the agent-loop clause as landed
+   in week 8; `16-tests.md` gained the `test_agent.py` and week-8 verifier rows, the
+   holdout-isolation / public-mode rows note their wk-8 clauses, status "wk 1–8 suites green;
+   only the live-AI smoke tests skip"; `18-runtime-config.md` confirms no new variable
+   (`agent.py` reads none; `.env.example` unchanged); README "Methodology and known
+   limitations" AI paragraph extended with the research agent (train/validation only,
+   10-iteration cap on model calls, budget-gated, one-shot holdout by the runner, val vs
+   holdout side by side) linking `tests/test_holdout_isolation.py` and `tests/test_agent.py`;
+   Week-8 plan boxes ticked; `test_week7_closeout_verifier.py` pins advanced to the week-8
+   state (24 ticks, week-8 entry first, 16-tests status, guardrails "landed wk 8", 13-ai-agent
+   signature cross-checked against `inspect.signature`), and — per the week-7 precedent — the
+   week-3/4/5/6 closeout verifiers' plan-count / handoff-position / 16-tests-status pins
+   advanced too, so no test was deleted.
+
+### Agent failures and resolutions
+
+None — all six build milestones and their independent verifier suites completed green on the
+first pass. Three verifier pins were *reconciled* (not failures): milestone 1 retargeted
+`test_nl_interface_verify.py::test_every_messages_create_in_the_ai_package_is_inside_call` to
+accept `agent._call` as a second metered call site; milestone 4 retargeted two
+`test_agent_verify.py` pins that had frozen the `run_research` stub (`NotImplementedError` /
+`TODO` marker; `"ENGINES" not in src` → `"ENGINES[" not in src`, since the spec requires the
+`engine not in mcp_server.ENGINES` membership check). Intent preserved in each case.
+
+### Open items (carried forward)
+
+1. **Commit Week 8** (`ai/agent.py`, `test_agent.py` + `test_agent_verify.py`, the agent
+   clauses of the two isolation suites, `test_week8_closeout_verifier.py`, the doc sync, and
+   the closeout-verifier pin advances) once Kent approves — per repo practice, commits happen
+   only with his explicit approval. (Week 7 is already committed as `6d128c4`.)
+2. `ANTHROPIC_API_KEY` is still a placeholder in `.env`, so **neither live smoke has been
+   run** (`QUANTFORGE_LIVE_AI=1 pytest tests/test_nl_interface.py tests/test_agent.py -k
+   live_smoke`); every AI-layer proof so far is offline with a fake client. Run both once the
+   personal key is in place (the agent smoke uses `max_iters=2`; well under a dollar).
+3. Prompt caching engages only past each model's minimum cacheable prefix — breakpoints are
+   in place and cost nothing (documented in `12-nl-interface.md`; not a defect).
+4. **UI wiring is week 9:** the Research tab / Research mode (`agent.run_research` with the
+   iteration timeline and the validation-vs-holdout side-by-side display), the chat panel over
+   `nl_interface.handle`, fallback routing to cached scenarios, and the `DEMO_PASSCODE` gate.
+   The app shell still imports no `quantforge.ai.*`.
+
+**Next up (per docs/TEN_WEEK_PLAN.md): Week 9 — finish UI + deploy + harden** (AI chat panel +
+Research mode + engine selector; containerize, Terraform → Fargate, live URL; `PUBLIC_MODE=on`
+hardening with the global ledger, passcode gate, rate limits, AWS Budgets alarm).
+
+---
+
 ## 2026-09-10 — Week 7 complete: MCP + NL interface + budget/guardrails (`build-verified` workflow)
 
 **Status: Week 7 complete and green.** `ruff check .` clean; fresh full `pytest` at closeout:
