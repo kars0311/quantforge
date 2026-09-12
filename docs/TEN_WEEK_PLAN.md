@@ -37,9 +37,9 @@ flexible home internship — the timeline can stretch a little rather than cutti
       tolerance rationale).
 
 ## Week 7 — MCP + natural-language interface
-- [ ] `ai/mcp_server.py`: expose `load_data` / `run_backtest` / `optimize_portfolio` / `get_metrics`.
-- [ ] `ai/nl_interface.py`: Claude tool-use parses a request → runs → explains in English.
-- [ ] Wire `ai/budget.py` caps + `ai/guardrails.py` from day one (don't bolt on later).
+- [x] `ai/mcp_server.py`: expose `load_data` / `run_backtest` / `optimize_portfolio` / `get_metrics`.
+- [x] `ai/nl_interface.py`: Claude tool-use parses a request → runs → explains in English.
+- [x] Wire `ai/budget.py` caps + `ai/guardrails.py` from day one (don't bolt on later).
 
 ## Week 8 — AI research agent (headline)
 - [ ] `ai/agent.py`: propose → backtest → read metrics → refine loop.

@@ -1,6 +1,6 @@
 # Component 09 — `src/quantforge/ai/budget.py` (spend accounting + kill-switch)
 
-**Week:** 7 (wired from the FIRST AI call) · **Status:** stub · **Depends on:** nothing
+**Week:** 7 (wired from the FIRST AI call) · **Status:** built / green (wk 7) — `tests/test_budget.py` · **Depends on:** nothing
 
 ## Function
 
@@ -43,6 +43,28 @@ def remaining() -> dict[str, float]
   ever scales past one container, this becomes DynamoDB/Redis — documented seam, not built.)
 - "Daily" is defined by **UTC** date — matches the ledger keys and the AWS Budgets granularity.
 - Fail-closed: if the ledger file is corrupt/unreadable, `allow()` returns False in PUBLIC_MODE.
+
+## Decisions made in build (wk 7)
+
+- **A cap that resolves to ≤ 0 is "no budget" and denies outright** — even `allow(0.0)`.
+  Without this rule the strict-`>` boundary would let a zero-cost call through when caps are
+  unset in PUBLIC_MODE, contradicting fail-closed. Unset/blank/unparseable caps → `0` in
+  public mode, `2` / `10` USD dev defaults otherwise; caps are re-read from the environment
+  on every call so an operator can tighten them without a restart.
+- **Corrupt-ledger policy is centralized** (`_load_ledger_with_policy`): PUBLIC_MODE →
+  `allow()` False, `remaining()` zeros, and `charge()` raises `LedgerCorruptError` rather
+  than overwriting (a silently reset ledger would erase real spend history); dev mode treats
+  the file as empty with a logged warning.
+- **Conservative cache-token billing.** The one caller that reads API usage
+  (`nl_interface._call`) charges `input + cache_creation + cache_read` tokens all at the full
+  input rate, so the ledger can only over-count relative to the invoice. Prompt-cache
+  discounts are a saving the ledger deliberately does not take credit for.
+- **Atomic, locked writes.** Temp file + `os.replace` under a module `threading.Lock` plus
+  `fcntl.flock` on `<ledger>.lock`; 8 threads × 10 charges sum exactly in tests. The
+  rate-limit state file (component 10) reuses this writer and lives beside the ledger, so
+  `AI_LEDGER_PATH` is the single knob for where AI state goes.
+- `_utc_today()` is a separate function so tests monkeypatch the day boundary instead of
+  the clock.
 
 ## Done when
 

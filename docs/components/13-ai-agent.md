@@ -44,12 +44,12 @@ the Research-mode timeline and saved with cached scenarios.
 - "Best" = highest **validation** Sharpe (not train — that asymmetry is the anti-overfitting
   point, worth one docstring paragraph).
 - The agent's context contains *metrics summaries only* — never price data, never holdout dates
-  (`load_data` clamps them, layer two of SF-8).
+  (`load_data` rejects them, layer two of SF-8).
 - Honest-reporting rule: the UI must always show validation and holdout metrics side by side;
   a big val/holdout gap is *itself* the demo's teaching moment, not a failure to hide.
 
 ## Done when
 
-- `test_holdout_isolation.py` green (opaque handle + single-use + tool clamp); a mocked-client
+- `test_holdout_isolation.py` green (opaque handle + single-use + tool-level rejection); a mocked-client
   loop test proves cap/budget stops and that exactly one holdout scoring happens; live run
   produces a coherent history on cached data.

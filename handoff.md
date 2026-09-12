@@ -5,6 +5,105 @@ Newest entry first.
 
 ---
 
+## 2026-09-10 — Week 7 complete: MCP + NL interface + budget/guardrails (`build-verified` workflow)
+
+**Status: Week 7 complete and green.** `ruff check .` clean; fresh full `pytest` at closeout:
+**879 passed / 1 skipped** (baseline at run start was 488 passed / 2 skipped; the
+two old skips were the wk-8/9 placeholder stubs in `test_holdout_isolation.py` and
+`test_public_mode_no_codegen.py`, both now un-skipped and green — the single remaining skip is
+`tests/test_nl_interface.py::test_live_smoke`, the live-API smoke that runs only with
+`QUANTFORGE_LIVE_AI=1`). Growth is the five week-7 suites plus the workflow verifiers' proving
+suites; `tests/test_week7_closeout_verifier.py` lands after this count, as the week-6
+verifier did; after that verifier and the cleaner's polish pass the final fresh run is
+**919 passed / 1 skipped** (re-run by hand on 2026-09-11, ruff clean). All three Week-7 boxes
+in `docs/TEN_WEEK_PLAN.md` are ticked (21 total). Week 6 was committed as `f2e8cd0`;
+**Week 7 is uncommitted** — commit pending Kent's approval (see open items). Note: an earlier,
+unrecorded Week-7 attempt was hard-reverted at Kent's request on 2026-09-10 before this run;
+this entry describes the rebuilt version only.
+
+### What was built this run
+
+1. **`src/quantforge/ai/budget.py`** (stub → complete) — `PRICES_PER_MTOK`, `estimate`,
+   `allow`, `charge`, `remaining`; JSON ledger keyed by UTC day at `AI_LEDGER_PATH`, atomic
+   temp-file + `os.replace` writes under a thread lock + `fcntl.flock`; caps re-read from the
+   environment every call; kill-switch `AI_DISABLED=on`; fail-closed policy (a cap that
+   resolves to ≤ 0 denies outright, so unset caps in PUBLIC_MODE deny every call; corrupt
+   ledger → deny and refuse to overwrite in public mode, warn-and-continue in dev).
+   Proven by `tests/test_budget.py` (35 tests incl. an 8-thread exact-sum charge test).
+2. **`src/quantforge/ai/guardrails.py`** (stub → complete) — `MAX_AGENT_ITERS`,
+   `VETTED_STRATEGIES`, `public_mode()` read at call time, `HoldoutHandle` (slots-only,
+   metadata repr, unpicklable; the slice lives in a closure), `split_data` by the loader's
+   fixed dates, `score_holdout` (one shot; `consumed` set before the run; lazy-imports
+   `mcp_server.ENGINES`), `rate_limit` (sliding hour, state file beside the ledger),
+   `assert_no_codegen` (exact `{strategy, params}` key set, flat scalar values, whitelist).
+   Proven by `tests/test_guardrails.py` (20), `tests/test_holdout_isolation.py` (9,
+   un-skipped) and `tests/test_public_mode_no_codegen.py` (26, un-skipped).
+3. **`src/quantforge/ai/mcp_server.py`** (stub → complete) — `ENGINES` registry, `OBJECTIVES`,
+   opaque `ds_…`/`res_…` handle registries, the four validated tools (`load_data` rejects —
+   never truncates — any window touching the holdout; `run_backtest` runs
+   `assert_no_codegen` + `validate_params`; `optimize_portfolio` takes exactly one selector;
+   `get_metrics`), generated strict `TOOL_SCHEMAS`, `build_server()` (FastMCP, strict schemas
+   advertised and validated on the wire), `python -m quantforge.ai.mcp_server` stdio entry.
+   Proven by `tests/test_mcp_tools.py` (58) and `tests/test_mcp_server.py` (15).
+4. **`src/quantforge/ai/nl_interface.py`** (stub → complete) — Haiku (`claude-haiku-4-5`)
+   forced-tool `parse`, `explain`, and `handle` over the tools; `_call` is the only
+   `messages.create` site and charges the budget immediately with conservative
+   (uncached + cache-write + cache-read at full input rate) metering; prompt caching
+   breakpoints on the system prompt + last tool; gate order rate → budget (2× per-call
+   estimate) → parse → `assert_no_codegen` on the raw plan → tools → explain; fallback
+   vocabulary `{rate, budget, public_mode, invalid, api_error}`. Proven by
+   `tests/test_nl_interface.py` (37 offline with a `FakeClient` and `ANTHROPIC_API_KEY`
+   unset, + 1 env-flagged live smoke).
+5. **Verifier suites** (independent agents, adversarial): `test_budget_verify.py`,
+   `test_guardrails_verifier.py`, `test_mcp_tools_verify.py`, `test_mcp_server_verify.py`,
+   `test_nl_interface_verify.py`.
+6. **Docs/config closeout (this entry)** — `.env.example` now carries every variable in the
+   `docs/components/18-runtime-config.md` table with a comment (dev defaults 2/10 when caps are
+   unset; PUBLIC_MODE with unset caps denies everything); `QUANTFORGE_LIVE_AI` documented as
+   test-only in `tests/test_nl_interface.py`, not as a runtime setting; component docs 09/10/11/12
+   status stub → built/green (wk 7) with "Decisions made in build" lists (reject-not-truncate
+   holdout dates; conservative cache-token billing; rate-limit file derived from
+   `AI_LEDGER_PATH`; `score_holdout` lazy-imports `ENGINES`); 18 status → `.env.example`
+   complete for week 7; `16-tests.md` rows for the five suites + the two un-skipped suites
+   green (wk 7), week-7 verifier row added, status "wk 1–7 suites green; only the live-AI
+   smoke test skips"; Week-7 plan boxes ticked; README "Methodology and known limitations"
+   gained an "AI layer safety" paragraph pointing at `ai/budget.py`, `ai/guardrails.py`, the
+   parameter-only PUBLIC_MODE rule and the proving tests; the week-3/4/5/6 closeout verifiers'
+   plan-count / handoff-position / 16-tests-status pins advanced to the week-7 state, per
+   precedent. A stale "load_data clamps" wording in `11-mcp-server.md` / `13-ai-agent.md` was
+   corrected to "rejects" to match the built behaviour.
+
+### Agent failures and resolutions
+
+None — all six build milestones and their independent verifier suites completed and returned
+green on the first pass; no stalls, retries, or manual verifications were needed this run.
+
+### Open items (carried forward)
+
+1. Commit Week 7 (the four `ai/` modules, the seven week-7 suites + five verifier suites +
+   `test_week7_closeout_verifier.py`, `.env.example`/`.gitignore`, and the doc sync) once Kent
+   approves — per repo practice, commits happen only with his explicit approval. (Week 6 is
+   already committed as `f2e8cd0`.)
+2. `ANTHROPIC_API_KEY` is still a placeholder in `.env`, so the live smoke test
+   (`QUANTFORGE_LIVE_AI=1 pytest tests/test_nl_interface.py -k live_smoke`) has **not** been
+   run; every AI-layer proof so far is offline with a fake client. Run it once the personal key
+   is in place (costs well under a cent).
+3. Prompt caching will not engage on Haiku until the prompts exceed the model's minimum
+   cacheable prefix — the `cache_control` breakpoints are in place and cost nothing; documented
+   in `docs/components/12-nl-interface.md`, not a defect.
+4. UI wiring of `nl_interface.handle` (chat panel, fallback routing to cached scenarios,
+   `DEMO_PASSCODE` gate) is a **week 9** item; the app shell still imports no `quantforge.ai.*`.
+5. The agent-loop clause of `tests/test_holdout_isolation.py` (that `agent.run_research` never
+   touches the handle and the runner scores it exactly once after the loop) lands in week 8
+   with `ai/agent.py`; week 7 proves the guard itself.
+
+**Next up (per docs/TEN_WEEK_PLAN.md): Week 8 — AI research agent** (`ai/agent.py`,
+`run_research`: propose → backtest → read metrics → refine over the MCP tools on train +
+validation only, `MAX_AGENT_ITERS` cap, budget cap; one-shot holdout via `score_holdout`
+after the loop; `test_agent.py` + the agent clause of `test_holdout_isolation.py`).
+
+---
+
 ## 2026-09-01 — Week 6 complete: R analytics layer + polyglot cross-check (`build-verified` workflow)
 
 **Status: Week 6 complete and green.** `ruff check .` clean; fresh full `pytest` at closeout:

@@ -2,9 +2,8 @@
 
 Independently proves the closeout's four deliverables so none can silently regress:
 
-- docs/TEN_WEEK_PLAN.md: both Week-4 boxes ticked, exactly 18 ticked overall (advanced from 15
-  at the Week-6 closeout, matching the precedent of advancing pins each week), Weeks 7-10 +
-  Stretch untouched.
+- docs/TEN_WEEK_PLAN.md: both Week-4 boxes ticked, exactly 21 ticked overall (advanced from 18
+  at the Week-7 closeout, matching the precedent of advancing pins each week), Weeks 8-10 + Stretch untouched.
 - The three component docs reflect the new statuses: no stale "stub" in 05-strategies.md, no
   stale "t-1" timing convention in 03-engine-base.md, the freeze pinned by name, and
   16-tests.md's inventory listing both week-4 suites as green.
@@ -64,13 +63,15 @@ def test_plan_week4_both_items_ticked_and_named():
 
 
 def test_plan_no_other_checkbox_changed():
-    # Weeks 1-3 stay fully ticked (4+3+3), Week 4 adds 2, Weeks 5-6 add 3 each — exactly 18 in
-    # the whole file, so a stray tick anywhere later (or an untick earlier) fails here.
-    assert _PLAN.count("- [x]") == 18
-    for week, n in {"Week 1": 4, "Week 2": 3, "Week 3": 3, "Week 5": 3, "Week 6": 3}.items():
+    # Weeks 1-3 stay fully ticked (4+3+3), Week 4 adds 2, Weeks 5-7 add 3 each — exactly 21 in
+    # the whole file (pin advanced at the week-7 closeout), so a stray tick anywhere later (or
+    # an untick earlier) fails here.
+    assert _PLAN.count("- [x]") == 21
+    weeks = {"Week 1": 4, "Week 2": 3, "Week 3": 3, "Week 5": 3, "Week 6": 3, "Week 7": 3}
+    for week, n in weeks.items():
         body = _plan_section(week)
         assert body.count("- [x]") == n and "- [ ]" not in body
-    for later in ("Week 7", "Week 8", "Week 9", "Week 10", "Stretch"):
+    for later in ("Week 8", "Week 9", "Week 10", "Stretch"):
         body = _plan_section(later)
         assert "- [x]" not in body, f"{later} has a prematurely ticked box"
         assert "- [ ]" in body, f"{later} lost its checklist"

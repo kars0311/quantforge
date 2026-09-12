@@ -2,8 +2,8 @@
 
 Independently proves the closeout's four deliverables so none can silently regress:
 
-- docs/TEN_WEEK_PLAN.md: all three Week-5 boxes ticked and named, exactly 18 ticked overall
-  (pins advanced at the Week-6 closeout, per precedent), Weeks 7-10 + Stretch untouched.
+- docs/TEN_WEEK_PLAN.md: all three Week-5 boxes ticked and named, exactly 21 ticked overall
+  (pins advanced at the Week-7 closeout, per precedent), Weeks 8-10 + Stretch untouched.
 - docs/components/07-portfolio.md: status advanced off "stub" AND the RG-6 R cross-check state
   is explicit — as of week 6 it must be stated as *landed* (with the machine-local caveat),
   never silently omitted and never regressed back to the pre-week-6 "NOT done" wording.
@@ -62,15 +62,23 @@ def test_plan_week5_all_three_items_ticked_and_named():
     assert "Streamlit shell" in body
 
 
-def test_plan_exactly_18_ticked_and_weeks_7_plus_untouched():
-    # Adversarial exact count: 4+3+3+2+3+3 for Weeks 1-6 (pin advanced at the week-6
+def test_plan_exactly_21_ticked_and_weeks_8_plus_untouched():
+    # Adversarial exact count: 4+3+3+2+3+3+3 for Weeks 1-7 (pin advanced at the week-7
     # closeout) — a stray tick anywhere later in the file (or an untick earlier) fails here.
-    assert _PLAN.count("- [x]") == 18
-    weeks = {"Week 1": 4, "Week 2": 3, "Week 3": 3, "Week 4": 2, "Week 5": 3, "Week 6": 3}
+    assert _PLAN.count("- [x]") == 21
+    weeks = {
+        "Week 1": 4,
+        "Week 2": 3,
+        "Week 3": 3,
+        "Week 4": 2,
+        "Week 5": 3,
+        "Week 6": 3,
+        "Week 7": 3,
+    }
     for week, n in weeks.items():
         body = _plan_section(week)
         assert body.count("- [x]") == n and "- [ ]" not in body
-    for later in ("Week 7", "Week 8", "Week 9", "Week 10", "Stretch"):
+    for later in ("Week 8", "Week 9", "Week 10", "Stretch"):
         body = _plan_section(later)
         assert "- [x]" not in body, f"{later} has a prematurely ticked box"
         assert "- [ ]" in body, f"{later} lost its checklist"

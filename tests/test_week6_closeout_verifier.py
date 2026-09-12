@@ -3,8 +3,9 @@
 Independently proves the closeout's deliverables so none can silently regress:
 
 - docs/TEN_WEEK_PLAN.md: all three Week-6 boxes ticked, the third explicitly annotated as
-  satisfied by the written methodology notes, exactly 18 ticked overall, Weeks 7-10 + Stretch
-  untouched.
+  satisfied by the written methodology notes; plan-count and handoff-position pins advanced at
+  the week-7 closeout per precedent (21 ticked overall, Weeks 8-10 + Stretch untouched; the
+  Week-6 handoff entry sits directly below the Week-7 one).
 - docs/components/08-r-tearsheet.md: status advanced off "stub"; the "Cross-language
   conventions and caveats" section names every convention the spec demanded (population vs
   sample std with the sd()*sqrt((n-1)/n) correction, ANN=252 observation-count CAGR,
@@ -20,7 +21,7 @@ Independently proves the closeout's deliverables so none can silently regress:
   caveat is gone and the landed cross-check is named with its proving suite.
 - docs/components/16-tests.md: the R rows are green wk 6, and every week-6 test file the
   inventory claims exists actually exists (no phantom suites).
-- handoff.md: the newest entry is the dated 2026-09-01 Week-6 closeout with the exact gate
+- handoff.md: the dated 2026-09-01 Week-6 closeout entry (now directly below the Week-7 one) with the exact gate
   counts (488 passed / 2 skipped), the long-carried R-side Parquet read check explicitly
   closed, the commit-pending and machine-local-R notes, and Week 7 as next. Dates stay
   newest-first.
@@ -80,10 +81,11 @@ def test_plan_week6_pressure_test_annotated_as_satisfied_by_notes():
     assert "08-r-tearsheet.md" in third
 
 
-def test_plan_exactly_18_ticked_and_weeks_7_plus_untouched():
-    # Adversarial exact count: 4+3+3+2+3+3 for Weeks 1-6 — a stray tick anywhere later in the
-    # file (or an untick earlier) fails here.
-    assert _PLAN.count("- [x]") == 18
+def test_plan_exactly_21_ticked_and_weeks_8_plus_untouched():
+    # Adversarial exact count: 4+3+3+2+3+3+3 for Weeks 1-7 (pin advanced at the week-7
+    # closeout, per precedent) — a stray tick anywhere later in the file (or an untick
+    # earlier) fails here.
+    assert _PLAN.count("- [x]") == 21
     for week, n in {
         "Week 1": 4,
         "Week 2": 3,
@@ -91,10 +93,11 @@ def test_plan_exactly_18_ticked_and_weeks_7_plus_untouched():
         "Week 4": 2,
         "Week 5": 3,
         "Week 6": 3,
+        "Week 7": 3,
     }.items():
         body = _plan_section(week)
         assert body.count("- [x]") == n and "- [ ]" not in body
-    for later in ("Week 7", "Week 8", "Week 9", "Week 10", "Stretch"):
+    for later in ("Week 8", "Week 9", "Week 10", "Stretch"):
         body = _plan_section(later)
         assert "- [x]" not in body, f"{later} has a prematurely ticked box"
         assert "- [ ]" in body, f"{later} lost its checklist"
@@ -232,7 +235,8 @@ def test_tests_doc_status_line_advanced_to_week6():
     # The header status wraps across lines; check the doc's head, not one physical line.
     head = "\n".join(_DOC_TESTS.splitlines()[:6])
     assert "**Status:**" in head
-    assert "wk 1–6" in head or "wk 1-6" in head
+    # Pin advanced at the week-7 closeout ("wk 1–6" -> "wk 1–7"): the R caveat must survive.
+    assert "wk 1–7" in head or "wk 1-7" in head
     assert "skipif" in head  # the machine-local R caveat is stated up front
 
 
@@ -251,15 +255,18 @@ def _handoff_entries() -> list[tuple[str, str]]:
     return out
 
 
-def test_handoff_newest_entry_is_week6_dated_this_run_and_dates_descend():
+def test_handoff_week6_entry_preserved_below_week7_and_dates_descend():
+    # Pin advanced at the week-7 closeout: the newest entry is now the 2026-09-10 Week-7 one and
+    # the Week-6 record must survive verbatim enough to keep its counts, directly below it.
     entries = _handoff_entries()
-    assert entries[0][0] == "2026-09-01" and "Week 6" in entries[0][1]
+    assert entries[0][0] == "2026-09-10" and "Week 7" in entries[0][1]
+    assert entries[1][0] == "2026-09-01" and "Week 6" in entries[1][1]
     dates = [d for d, _ in entries]
     assert dates == sorted(dates, reverse=True), "handoff entries are not newest-first"
 
 
 def test_handoff_week6_entry_contents():
-    body = _handoff_entries()[0][1]
+    body = next(b for d, b in _handoff_entries() if d == "2026-09-01" and "Week 6" in b)
     # Gate results recorded at closeout, by exact count, plus the ruff status.
     assert "488 passed / 2 skipped" in body
     assert "ruff" in body.lower() and "clean" in body.lower()

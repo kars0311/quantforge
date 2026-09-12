@@ -96,6 +96,19 @@ dedicated test where one exists; the custom engine is additionally validated aga
   in ["Cross-language conventions and caveats"](docs/components/08-r-tearsheet.md#cross-language-conventions-and-caveats)
   in `docs/components/08-r-tearsheet.md`, proven by
   [`tests/test_r_cross_check.py`](tests/test_r_cross_check.py).
+- **AI layer safety.** Every Claude API call in the app goes through
+  [`src/quantforge/ai/budget.py`](src/quantforge/ai/budget.py) (estimate → `allow()` → call →
+  `charge()` against hard daily/total USD caps, a persistent UTC-day ledger, and an `AI_DISABLED`
+  kill-switch) and is gated by [`src/quantforge/ai/guardrails.py`](src/quantforge/ai/guardrails.py)
+  (per-key rate limit; the train/validation/holdout split with the holdout behind an opaque,
+  score-once handle; and `assert_no_codegen`). With `PUBLIC_MODE=on` the server is
+  **parameter-only**: the natural-language interface (`ai/nl_interface.py`) and the MCP tools
+  accept nothing but a vetted strategy name and whitelisted parameter values — LLM-generated
+  code is never executed, and any date range touching the holdout is rejected rather than
+  truncated. Proven by [`tests/test_public_mode_no_codegen.py`](tests/test_public_mode_no_codegen.py),
+  [`tests/test_holdout_isolation.py`](tests/test_holdout_isolation.py), and
+  [`tests/test_budget.py`](tests/test_budget.py); the variable inventory lives in
+  [`docs/components/18-runtime-config.md`](docs/components/18-runtime-config.md).
 
 ## Quickstart
 

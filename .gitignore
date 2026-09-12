@@ -25,6 +25,10 @@ data/processed/
 output/
 *.parquet
 !tests/fixtures/*.parquet
+data_cache/ai_ledger.json
+data_cache/ai_ledger.json.lock
+data_cache/ai_rate_limits.json
+data_cache/ai_rate_limits.json.lock
 
 # ── Streamlit ──
 .streamlit/secrets.toml
