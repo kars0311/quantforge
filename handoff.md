@@ -5,6 +5,144 @@ Newest entry first.
 
 ---
 
+## 2026-09-12 — Week 7/8 open-items fix run (build-verified workflow)
+
+**Status: all Week-7/8 open items and the leftover verifier findings fixed; green.** `ruff check .`
+clean; `ruff format --check .` clean (repo-wide, zero `Would reformat`); fresh full `pytest` at
+closeout: **1396 passed / 2 skipped** (baseline at run start was 1207 passed / 2 skipped / 1
+failed — see the correction below). The two skips are, as before, the opt-in live-API smokes
+`tests/test_nl_interface.py::test_live_smoke` and `tests/test_agent.py::test_live_smoke`, which
+run only with `QUANTFORGE_LIVE_AI=1`. No plan box was touched (`docs/TEN_WEEK_PLAN.md` still has
+exactly 24 ticks; the file is byte-identical to HEAD) — this run built no Week-9 work.
+
+**Correction to the 2026-09-11 entry.** Week 8 WAS committed, as `74af8d9` ("week 8 complete";
+`git log` shows it on top of `6d128c4`), and the tree was clean at the start of this run — so the
+"Week 8 is uncommitted" open item in that entry is closed. That commit also carried the Week-8
+handoff entry into HEAD, which broke the week-8 closeout verifier's own byte-identity pin
+(`tests/test_week8_closeout_verifier.py::test_handoff_prepend_left_every_earlier_entry_byte_identical_to_head`
+asserted HEAD's first entry was *not* 2026-09-11 — the one pre-existing red test in the baseline).
+It is fixed by the pin advance in item 15 below: HEAD's first entry is now expected to be the
+2026-09-11 one and the working copy's first entry this 2026-09-12 one, with every entry below it
+still byte-identical to HEAD.
+
+### What was fixed
+
+1. **`.env.example`** — `AI_BUDGET_USD_DAILY` 5 → 2 and `AI_BUDGET_USD_TOTAL` 25 → 10, so the
+   example values equal `budget._DEV_DEFAULT_DAILY_USD` / `_DEV_DEFAULT_TOTAL_USD` and the 2/10
+   table in `docs/components/18-runtime-config.md` (status line notes the alignment). Only those
+   two value lines differ from HEAD; the variable set is unchanged.
+2. **`requirements.txt`** — `jsonschema` added explicitly under `# Dev / test`:
+   `tests/test_mcp_server.py` imports it directly and it was only a transitive dependency of `mcp`.
+3. **`.gitignore`** — the four exact AI-state lines replaced by the prefix globs
+   `data_cache/ai_ledger.json*` and `data_cache/ai_rate_limits.json*`, so the ledger, its
+   `.lock` / `.corrupt` sidecars, the `mkstemp` `.<rand>.tmp` temp and the rate-limit state +
+   lock are all ignored (`git check-ignore` proven for each).
+4. **`src/quantforge/ai/budget.py`** — `estimate` / `charge` accept any `numbers.Integral` token
+   count (numpy ints included; `bool` and `np.bool_` still refused) and coerce to plain `int`
+   before the ledger write, since `np.int64` is not JSON-serialisable and the write would
+   otherwise fail *after* the spend.
+5. **`src/quantforge/ai/agent.py`** — `_call(tools=[])` raises a clear `ValueError` before any
+   request is built or charged (was a bare `IndexError` from the cache-breakpoint placement);
+   `_val_sharpe` maps `sharpe is None` (a NaN that went through a JSON round-trip) to `-inf`
+   instead of `TypeError`; `run_research` rejects an unhashable `engine` (e.g. a list) with the
+   documented `ValueError`, not `TypeError`, and validates `tickers` via
+   `mcp_server._validate_tickers` BEFORE constructing the SDK client, so an unknown ticker fails
+   identically with or without credentials (order: goal → max_iters → engine → cost → tickers →
+   client). The forced `tool_choice: {"type": "any"}` request shape was checked against the
+   `claude-api` skill (`shared/model-migration.md`): on the Claude API and Vertex AI a forced
+   tool choice needs no `thinking` change — only Bedrock requires `thinking: {type: "disabled"}`
+   — and `claude-sonnet-5` runs adaptive thinking when `thinking` is omitted, so there is **no
+   conflict** and the request shape is unchanged (Bedrock-only caveat recorded in the `_call`
+   docstring and `docs/components/13-ai-agent.md`; pinned: exact request key set, no `thinking`
+   key, model not one of the Fable/Mythos 5.1 ids that 400 on forced tool choice). The
+   `run_research` docstring now states that the holdout is always scored at
+   `guardrails._HOLDOUT_COST_BPS` regardless of the loop's `cost_bps` (proven with an engine spy).
+6. **`src/quantforge/ai/nl_interface.py`** — `handle("")`, whitespace-only and >2000-char
+   queries return a clarification (`plan={"clarify": ...}`, `fallback=None`, `spend_usd=0.0`)
+   BEFORE `guardrails.rate_limit` records a slot or `budget.allow` reads the ledger (gate order is
+   now query shape → rate limit → budget → parse → parameter-only gate → tools → explain; a
+   non-str query is still a caller bug → `ValueError`; `parse`/`parse_with_spend` unchanged);
+   `_raw_plan` treats a non-list `tickers` value (str/dict/number) as a clarification instead of
+   `list()`-ing it. Flow comment and a design-notes bullet updated in `12-nl-interface.md`.
+7. **`src/quantforge/ai/mcp_server.py`** — `run_backtest` docstring rewritten to the ACTUAL
+   validation order (dataset → non-dict params / non-str strategy as plain `ValueError`s →
+   `assert_no_codegen` in PUBLIC_MODE → `validate_params` → engine → `cost_bps`); the
+   `optimize_portfolio` `result_ids` / `dataset_id` schema descriptions now state the
+   exactly-one-of rule (there is deliberately no `oneOf`; module docstring says why).
+   `docs/components/11-mcp-server.md` corrected: the parameter-only gate runs in `run_backtest`
+   only (the one tool that carries `{strategy, params}`), not in every tool — no uniform gate
+   added, the doc was the thing that was wrong.
+8. **`src/quantforge/ai/guardrails.py`** — `HoldoutHandle` docstring states the closure guards
+   against accidental / tool-mediated access, not deliberate in-process introspection (the
+   structural guarantee is the MCP `load_data` rejection in `tests/test_holdout_isolation.py`);
+   `_resolve_engine` docstring reworded to the true reason for the function-local import
+   (`mcp_server.py` imports `guardrails` at top level for `assert_no_codegen`, so a top-level
+   import back would be a cycle). Both docstring-only; AST equal to HEAD once docstrings are
+   stripped. Mirrored in `10-ai-guardrails.md` (status line untouched).
+9. **`ruff format`** applied to the six files that were not `--check` clean —
+   `src/quantforge/data/loader.py`, `src/quantforge/metrics/performance.py`,
+   `tests/test_interchange_roundtrip.py`, `tests/test_interchange_verifier.py`,
+   `tests/test_loader.py`, `tests/test_loader_constants.py` — with zero behaviour change:
+   `ast.dump` of each equals its HEAD version (scratchpad script, not committed); `UNIVERSE`
+   keeps its order, length and section comments (pinned).
+10. **Proof suite** — every builder test for this run lives in one new file,
+    **`tests/test_handoff_open_items.py`** (69 collected tests), so no existing per-suite
+    collection-count pin moved; the workflow's independent verifier added
+    `tests/test_handoff_open_items_verify.py` (119 collected). `16-tests.md` gained a row for it.
+11. **Closeout pins advanced** (no test deleted; per-file `def test_` counts equal HEAD's):
+    `test_week8_closeout_verifier.py` (Week-8 entry looked up by date, byte-identity pin expects
+    HEAD's first entry = 2026-09-11 and the working copy's = 2026-09-12, needle checks shifted
+    one entry down; `.env.example` pin retargeted to "variable set equals HEAD, only the two caps
+    differ"), `test_week7_closeout_verifier.py` (newest-entry test renamed to
+    `test_handoff_week8_entry_is_second_below_the_2026_09_12_fix_entry_and_dates_descend`,
+    Week-8 body by date lookup, `.env.example` caps pin = `budget` dev defaults),
+    `test_week6_closeout_verifier.py` (positional asserts shifted by one) and
+    `test_budget_verify.py` (`.gitignore` pin now asserts the covering glob). Each edited test's
+    comment says "Pin advanced at the 2026-09-12 fix run".
+
+**Post-run fix (2026-09-12, by the orchestrating session, after the workflow closed).** A
+throwaway `git worktree` simulation of committing this run showed 11 of the new pins would go
+red the moment HEAD moved: they compared the working tree against `HEAD`, which is only the
+pre-run state until the commit lands. `tests/test_handoff_open_items.py`,
+`tests/test_handoff_open_items_verify.py` and `tests/test_week8_closeout_verifier.py` now
+resolve the baseline by commit message (`_baseline_ref()` → the `week 8 complete` commit,
+`74af8d9`) instead of `HEAD`, and the format-scope pin diffs with `--diff-filter=M` so files
+added since the baseline are not looked up there. Separately, both `pytest --collect-only`
+helpers gained `--color=no`: with `FORCE_COLOR` set in the caller's shell the summary line was
+ANSI-wrapped and the `N tests collected` regex missed. Verified green in both states —
+working tree and the simulated post-commit worktree (1409 passed, 2 skipped), ruff check
+and ruff format clean.
+
+### Agent failures and resolutions
+
+None of the seven build milestones failed. Two things were reconciled rather than failed:
+(a) the baseline's one red test (the week-8 byte-identity pin, broken by the `74af8d9` commit, not
+by any code) was left red through milestones 1–6 on purpose and fixed by the closeout pin
+advance; (b) a third `.gitignore` pin the spec did not list
+(`test_budget_verify.py::test_config_files_document_the_new_env_vars`, asserting the exact old
+`data_cache/ai_ledger.json` line) was advanced to the glob rather than keeping a redundant exact
+line. The item-9 gate-scope question was decided as "correct the doc": `assert_no_codegen`
+inspects a `{strategy, params}` payload that only `run_backtest` carries.
+
+### Open items (carried forward)
+
+1. **Commit this fix run** (the 24 modified files + the two new test files) once Kent approves —
+   per repo practice, commits happen only with his explicit approval. HEAD is still `74af8d9`.
+2. `ANTHROPIC_API_KEY` is still a placeholder in `.env`, so **neither live smoke has been run**
+   (`QUANTFORGE_LIVE_AI=1 pytest tests/test_nl_interface.py tests/test_agent.py -k live_smoke`);
+   every AI-layer proof is offline with a fake client. Run both once the personal key is in place.
+3. Prompt caching engages only past each model's minimum cacheable prefix — breakpoints are in
+   place and cost nothing (documented in `12-nl-interface.md`; not a defect).
+
+**Next up (per docs/TEN_WEEK_PLAN.md): Week 9 — finish UI + deploy + harden** — the Research
+tab / Research mode (`agent.run_research` with the iteration timeline and the validation-vs-holdout
+side-by-side display), the chat panel over `nl_interface.handle` with fallback routing to cached
+scenarios, the `DEMO_PASSCODE` gate, engine selector; then containerize, Terraform → Fargate, live
+URL, and `PUBLIC_MODE=on` hardening (global ledger, rate limits, AWS Budgets alarm). The app shell
+still imports no `quantforge.ai.*`.
+
+---
+
 ## 2026-09-11 — Week 8 complete: AI research agent (build-verified workflow)
 
 **Status: Week 8 complete and green.** `ruff check .` clean; fresh full `pytest` at closeout:

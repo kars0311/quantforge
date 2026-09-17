@@ -113,6 +113,11 @@ class HoldoutHandle:
     frame), and no ``__iter__``/``__getitem__``/``__len__`` are defined so the object cannot be
     mistaken for a container.
 
+    The closure is a guard against accidental or tool-mediated access (an agent, a tool result,
+    a debugger repr, a pickle) — not a defence against deliberate in-process introspection of
+    the closure cell by code that already runs in this process; the structural guarantee is the
+    MCP ``load_data`` rejection, proven in ``tests/test_holdout_isolation.py``.
+
     What *is* public: ``n_days``, ``start``, ``end`` (the holdout's date range is a documented,
     fixed fact — see ``loader.SPLITS``) and ``consumed``. Dates are public knowledge; prices are not.
     """
@@ -162,9 +167,11 @@ def _slice_long(prices: pd.DataFrame, bounds: tuple[str, str]) -> pd.DataFrame:
 def _resolve_engine(name: str):
     """Look ``name`` up in ``mcp_server.ENGINES``; unknown names raise ValueError.
 
-    The import is function-local on purpose: ``mcp_server`` imports this module (for
-    ``assert_no_codegen``), so a top-level import here would be a cycle. Resolving through the
-    registry — never a concrete class — keeps the holdout score engine-agnostic (AR-1/AR-4).
+    The import is function-local on purpose: ``mcp_server.py`` imports this module at top
+    level (``from quantforge.ai import guardrails``, for ``assert_no_codegen`` in
+    ``run_backtest``), so a top-level import of ``mcp_server`` here would be a cycle. Resolving
+    through the registry — never a concrete class — keeps the holdout score engine-agnostic
+    (AR-1/AR-4).
     """
     from quantforge.ai.mcp_server import ENGINES
 

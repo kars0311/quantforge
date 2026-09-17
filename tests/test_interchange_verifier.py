@@ -80,9 +80,9 @@ def test_write_non_utc_aware_dates_rejected_leaves_no_file(tmp_path):
     # caller's normalization — the contract is UTC-in, and rejection keeps the boundary strict.
     df = pd.DataFrame(
         {
-            "date": pd.Series(
-                pd.date_range("2024-01-02", periods=2, tz="US/Eastern")
-            ).astype("datetime64[ns, US/Eastern]"),
+            "date": pd.Series(pd.date_range("2024-01-02", periods=2, tz="US/Eastern")).astype(
+                "datetime64[ns, US/Eastern]"
+            ),
             "ret": [0.01, -0.02],
         }
     )
@@ -98,9 +98,7 @@ def test_write_misordered_columns_rejected_leaves_no_file(tmp_path):
     df = pd.DataFrame(
         {
             "ticker": ["AAPL"],
-            "date": pd.Series([pd.Timestamp("2024-01-02", tz="UTC")]).astype(
-                "datetime64[ns, UTC]"
-            ),
+            "date": pd.Series([pd.Timestamp("2024-01-02", tz="UTC")]).astype("datetime64[ns, UTC]"),
             "close": [100.0],
         }
     )

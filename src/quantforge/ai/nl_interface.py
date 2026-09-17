@@ -77,6 +77,21 @@ _FALLBACK_API_ERROR = "api_error"
 
 _CLARIFY_UNPARSEABLE = "I couldn't turn that into a backtest — which strategy and date range?"
 
+#: ``handle``'s answer to an empty, whitespace-only, or over-long query. It is a clarification
+#: (a normal outcome, ``fallback=None``) rather than an exception because the UI's text box makes
+#: a blank submit or a pasted document an ordinary user action, not a caller bug — and it is
+#: decided BEFORE the rate limit so a stranger hammering "submit" on an empty box burns neither
+#: a slot nor a ledger read. Built from ``_MAX_QUERY_CHARS`` so the number cannot drift.
+_CLARIFY_EMPTY_QUERY = (
+    "Tell me what to backtest — a strategy and a date range — in under "
+    f"{_MAX_QUERY_CHARS} characters."
+)
+
+#: ``_raw_plan``'s answer when the model fills ``tickers`` with something other than a list.
+_CLARIFY_TICKERS_NOT_LIST = (
+    "I couldn't read the tickers in that request — please list them, e.g. AAPL and MSFT."
+)
+
 
 # --------------------------------------------------------------------------------------------
 # Frozen prompt material (cache-stable: built once from constants, no timestamps or ids)
@@ -291,6 +306,14 @@ def _raw_plan(response: Any) -> dict:
     :func:`_finalize_plan`). Essentials (strategy, start, end) are never defaulted: a missing one
     becomes a clarification, because a guessed date range is a silently different experiment.
     Optional fields take the pipeline's defaults — whole universe, 10 bps.
+
+    ``tickers`` is only trusted when it is a list (or absent/``None``/``[]``, meaning the whole
+    universe). The schema says "array", but nothing forces the model to obey it, and ``list()``
+    on a wrong-typed value would not fail — it would *mangle*: a string ``"AAPL"`` explodes into
+    ``["A", "A", "P", "L"]`` and a dict into its keys, and the resulting nonsense would reach
+    ``load_data`` looking like a legitimate (if unknown) ticker list. A non-list is therefore a
+    clarification. A list of non-strings passes through and is rejected downstream by
+    ``mcp_server._validate_tickers`` (fallback ``invalid``), exactly like an unknown ticker.
     """
     block = _find_tool_use(response, PLAN_TOOL["name"])
     if block is None:
@@ -308,6 +331,8 @@ def _raw_plan(response: Any) -> dict:
         return {"clarify": _CLARIFY_UNPARSEABLE}
 
     tickers = data.get("tickers")
+    if tickers is not None and not isinstance(tickers, list):
+        return {"clarify": _CLARIFY_TICKERS_NOT_LIST}
     cost_bps = data.get("cost_bps")
     return {
         "strategy": strategy,
@@ -495,15 +520,32 @@ def handle(query: str, *, session_key: str = "anon", client: Any = None) -> dict
     ``"api_error"``    the SDK raised (network, auth, 4xx/5xx) — the SDK's message is the
                        explanation, never a traceback
 
-    Gates run in this order, each at most once and all BEFORE the first model call: rate limit,
-    then budget (estimated for two calls, so a query that can afford to parse but not to explain
-    is refused up front rather than left half-done). The parameter-only gate runs on the raw
-    parse output before any tool executes. ``spend_usd`` is the sum of what the two calls actually
-    charged; closed gates report ``0.0``.
+    Gates run in this order, each at most once and all BEFORE the first model call:
+    query shape -> rate limit -> budget -> parse -> parameter-only gate -> tools -> explain.
+    Query validation comes first (before the rate limit) on purpose: an empty, whitespace-only
+    or over-``_MAX_QUERY_CHARS`` query returns the ``_CLARIFY_EMPTY_QUERY`` clarification with
+    ``fallback=None`` and ``spend_usd=0.0``, and it costs nothing and records nothing — no
+    rate-limit slot, no ledger read, no model call. A blank submit is an ordinary thing for a
+    person to do at a text box and must not eat into their hourly allowance. Budget is estimated
+    for two calls, so a query that can afford to parse but not to explain is refused up front
+    rather than left half-done. The parameter-only gate runs on the raw parse output before any
+    tool executes. ``spend_usd`` is the sum of what the two calls actually charged; closed gates
+    report ``0.0``.
 
-    ``session_key`` identifies the caller for the rate limit (the UI passes a per-session token);
-    it must be a non-empty string — that is a caller bug, so it raises rather than falls back.
+    ``query`` must be a ``str`` and ``session_key`` a non-empty string — either being wrong is a
+    caller bug, so it raises ``ValueError`` (before any gate) rather than falls back.
     """
+    if not isinstance(query, str):
+        raise ValueError("query must be a string")
+    if not query.strip() or len(query) > _MAX_QUERY_CHARS:
+        return _result(
+            plan={"clarify": _CLARIFY_EMPTY_QUERY},
+            metrics=None,
+            explanation=_CLARIFY_EMPTY_QUERY,
+            spend_usd=0.0,
+            fallback=None,
+        )
+
     if not guardrails.rate_limit(session_key):
         return _result(
             plan=None,

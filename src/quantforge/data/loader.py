@@ -30,17 +30,41 @@ from quantforge import interchange
 # not a point-in-time constituent history.
 UNIVERSE: list[str] = [
     # Tech
-    "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "CRM", "ADBE", "ORCL", "AVGO",
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "CRM",
+    "ADBE",
+    "ORCL",
+    "AVGO",
     # ADRs (international, US-listed, USD)
-    "TSM", "ASML", "SAP", "TM", "NVO", "SONY",
+    "TSM",
+    "ASML",
+    "SAP",
+    "TM",
+    "NVO",
+    "SONY",
     # Financials
-    "JPM", "GS", "V",
+    "JPM",
+    "GS",
+    "V",
     # Healthcare
-    "JNJ", "UNH", "PFE",
+    "JNJ",
+    "UNH",
+    "PFE",
     # Consumer
-    "PG", "KO", "MCD", "WMT", "HD",
+    "PG",
+    "KO",
+    "MCD",
+    "WMT",
+    "HD",
     # Energy / Industrial
-    "XOM", "CVX", "CAT",
+    "XOM",
+    "CVX",
+    "CAT",
 ]
 
 # Fixed date range. END is a hard cutoff, never "today": re-running the pipeline next month must
@@ -113,8 +137,12 @@ def _download_universe() -> pd.DataFrame:
     return interchange.to_long(close, "prices")
 
 
-def load_prices(tickers: list[str] | None = None, start: str = START, end: str = END,
-                cache_dir: str = "data_cache") -> pd.DataFrame:
+def load_prices(
+    tickers: list[str] | None = None,
+    start: str = START,
+    end: str = END,
+    cache_dir: str = "data_cache",
+) -> pd.DataFrame:
     """Return adjusted-close prices (long format: date, ticker, close), cached to Parquet.
 
     Cache hit: read the one canonical file via ``interchange.read_frame`` — zero network, and

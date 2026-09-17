@@ -349,6 +349,17 @@ def _call(
 
     Sonnet 5 runs adaptive thinking by default; the request deliberately sets no ``thinking``,
     ``temperature``, ``top_p`` or ``top_k`` (the sampling knobs are rejected on this model).
+    Forced ``tool_choice`` (``any``) alongside that default-on adaptive thinking is a supported
+    combination on the Claude API — verified against the ``claude-api`` skill
+    (``shared/model-migration.md``: only Amazon Bedrock requires ``thinking: {type: "disabled"}``
+    next to a forced ``tool_choice``, and forced ``any``/``tool`` returns 400 only on
+    ``claude-fable-5-1``/``claude-mythos-5-1``) — so ``thinking`` is absent on purpose, not by
+    omission; ``tests/test_handoff_open_items.py`` pins the request shape.
+
+    ``tools`` must be non-empty: the last tool carries a cache breakpoint, and the loop's
+    protocol assumes the model can always call something. An empty list is a caller bug, refused
+    here with a ValueError before the request is built (so nothing is sent and nothing charged)
+    rather than surfacing as an IndexError from the breakpoint placement.
 
     Metering: ``tokens_in`` is the sum of uncached, cache-write and cache-read input tokens, all
     priced at the full input rate. That over-counts cache reads (billed at a discount by the API),
@@ -357,6 +368,8 @@ def _call(
     cannot skip it. ``budget.charge`` is the one thing allowed to raise past this point (a corrupt
     ledger in PUBLIC_MODE) because spend must never go unrecorded silently.
     """
+    if not tools:
+        raise ValueError("tools must contain at least one tool definition")
     cached_tools = [copy.deepcopy(tool) for tool in tools]
     cached_tools[-1]["cache_control"] = {"type": "ephemeral"}
     request: dict[str, Any] = {
@@ -466,8 +479,14 @@ def _val_sharpe(record: dict[str, Any]) -> float:
     A non-finite Sharpe means the configuration never traded (zero volatility) or blew up;
     either way it is not a candidate, and mapping it to ``-inf`` keeps the comparison total
     (``nan > x`` is False both ways, which would otherwise make the winner depend on order).
+    ``None`` gets the same treatment: a NaN that has been through a JSON round-trip (the UI
+    caches runs as scenario files; ``_round_metrics`` emits ``null`` for NaN) comes back as
+    ``None``, and ``float(None)`` would turn a ranking pass over stored history into a TypeError.
     """
-    sharpe = float(record["val_metrics"]["sharpe"])
+    sharpe = record["val_metrics"]["sharpe"]
+    if sharpe is None:
+        return -math.inf
+    sharpe = float(sharpe)
     return sharpe if math.isfinite(sharpe) else -math.inf
 
 
@@ -831,9 +850,10 @@ def run_research(
     ``max_iters``, ``budget``, ``api_error``), and ``error`` carries the SDK message only in the
     last case; the history gathered before any stop is returned, never discarded.
 
-    Everything the agent can touch is fixed before it runs. The goal, iteration cap, engine name
-    and cost are validated first so a bad call costs nothing — no client is built, no data is
-    loaded, no model is called. The agent's data then enters ONLY through the ``load_data`` tool
+    Everything the agent can touch is fixed before it runs. The goal, iteration cap, engine name,
+    cost and tickers are validated first so a bad call costs nothing — no client is built (so an
+    unknown ticker fails the same way with or without credentials), no data is loaded, no model
+    is called. The agent's data then enters ONLY through the ``load_data`` tool
     with the loader's train and validation bounds (RG-4; layer two of SF-8 is the tool itself
     rejecting any other window), so the loop holds two dataset handles and nothing else. The
     tool's own errors (a ticker outside the universe, a window with no rows) propagate unchanged.
@@ -850,7 +870,10 @@ def run_research(
     loop ever saw. The ``HoldoutHandle`` is created here (a local, after the conversation is
     over), scored exactly once, and never stored in the result. When the agent was given a
     ticker subset, the holdout is cut from that same subset — scoring the winner on a different
-    universe would not measure the configuration the agent actually iterated on. An empty
+    universe would not measure the configuration the agent actually iterated on. The holdout is
+    always scored at ``guardrails._HOLDOUT_COST_BPS`` (10 bps) regardless of the ``cost_bps``
+    the loop used, because the holdout number must not be tunable — a caller who could lower
+    the cost for the final score alone would have a knob that only ever flatters it. An empty
     holdout (data ending before the holdout window) raises from ``score_holdout``: a missing
     holdout is a data-configuration fault the caller must see, never a silently missing number.
     If no proposal succeeded there is nothing to score, and neither ``split_data`` nor
@@ -871,12 +894,18 @@ def run_research(
     # All validation before any spend: nothing below this block may raise on a bad argument.
     goal = _validate_goal(goal)
     max_iters = _validate_max_iters(max_iters)
-    if engine not in mcp_server.ENGINES:
+    # ``isinstance`` first: an unhashable engine (a list, say) would otherwise raise TypeError
+    # from the ``in`` test instead of the documented ValueError.
+    if not isinstance(engine, str) or engine not in mcp_server.ENGINES:
         raise ValueError(
             f"unknown engine {engine!r}; registered engines: {sorted(mcp_server.ENGINES)}"
         )
     # The first run_backtest would reject a bad cost too, but only after a paid model call.
     mcp_server._validate_cost_bps(cost_bps)
+    # load_data re-validates tickers below (same function, same message); doing it here as well
+    # is what keeps a bad ticker from needing an SDK client — and credentials — to be rejected.
+    if tickers is not None:
+        mcp_server._validate_tickers(tickers)
     client = _get_client() if client is None else client
 
     # The agent's data enters only through the load_data tool, on the fixed train and

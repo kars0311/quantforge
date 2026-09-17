@@ -257,13 +257,14 @@ def _handoff_entries() -> list[tuple[str, str]]:
 
 
 def test_handoff_week6_entry_preserved_below_week7_and_dates_descend():
-    # Pin advanced at the week-8 closeout: the newest entry is now the 2026-09-11 Week-8 one,
-    # the Week-7 entry sits below it, and the Week-6 record must survive verbatim enough to
-    # keep its counts, directly below that.
+    # Pin advanced at the 2026-09-12 fix run: the newest entry is that run's open-items entry,
+    # then the 2026-09-11 Week-8 one, then Week 7, and the Week-6 record must survive verbatim
+    # enough to keep its counts, directly below that.
     entries = _handoff_entries()
-    assert entries[0][0] == "2026-09-11" and "Week 8" in entries[0][1]
-    assert entries[1][0] == "2026-09-10" and "Week 7" in entries[1][1]
-    assert entries[2][0] == "2026-09-01" and "Week 6" in entries[2][1]
+    assert entries[0][0] == "2026-09-12" and "open-items" in entries[0][1]
+    assert entries[1][0] == "2026-09-11" and "Week 8" in entries[1][1]
+    assert entries[2][0] == "2026-09-10" and "Week 7" in entries[2][1]
+    assert entries[3][0] == "2026-09-01" and "Week 6" in entries[3][1]
     dates = [d for d, _ in entries]
     assert dates == sorted(dates, reverse=True), "handoff entries are not newest-first"
 

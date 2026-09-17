@@ -51,6 +51,7 @@ import fcntl
 import json
 import logging
 import math
+import numbers
 import os
 import tempfile
 import threading
@@ -273,10 +274,22 @@ def _load_ledger_with_policy(path: Path) -> dict:
         return _empty_ledger()
 
 
-def _check_token_count(name: str, value: int) -> None:
-    """Reject bools and negatives: ``True`` silently counting as one token is a classic bug."""
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+def _check_token_count(name: str, value: numbers.Integral) -> int:
+    """Validate a token count and return it as a plain Python ``int``.
+
+    Accepts any ``numbers.Integral`` — not just the builtin ``int`` — because usage counters
+    that arrive via numpy/pandas (e.g. a ``np.int64`` summed from a DataFrame column) are
+    legitimate integers and must not be refused. Rejects bools (``True`` silently counting as
+    one token is a classic bug; ``np.bool_`` is not Integral but the builtin ``bool`` is),
+    floats, strings and negatives.
+
+    Returning the *coerced* value matters as much as the check: ``np.int64`` is not
+    JSON-serialisable, so if the raw scalar reached the ledger bucket, ``_write_ledger`` would
+    blow up inside ``json.dump`` *after* the caller had already spent the money.
+    """
+    if isinstance(value, bool) or not isinstance(value, numbers.Integral) or value < 0:
         raise ValueError(f"{name} must be a non-negative int, got {value!r}")
+    return int(value)
 
 
 # --------------------------------------------------------------------------------------------
@@ -295,8 +308,8 @@ def estimate(model: str, tokens_in: int, tokens_out: int) -> float:
     if model not in PRICES_PER_MTOK:
         known = ", ".join(sorted(PRICES_PER_MTOK))
         raise ValueError(f"unknown model {model!r}; priced models are: {known}")
-    _check_token_count("tokens_in", tokens_in)
-    _check_token_count("tokens_out", tokens_out)
+    tokens_in = _check_token_count("tokens_in", tokens_in)
+    tokens_out = _check_token_count("tokens_out", tokens_out)
     in_rate, out_rate = PRICES_PER_MTOK[model]
     return tokens_in / 1e6 * in_rate + tokens_out / 1e6 * out_rate
 
@@ -351,8 +364,10 @@ def charge(usd: float, *, model: str, tokens_in: int, tokens_out: int) -> None:
 
     ``usd`` is what the caller computed from real usage — typically ``estimate(model, in, out)``
     with the response's token counts — so the ledger reflects money actually spent, not the
-    pre-call guess. Validation is strict (finite, ≥ 0; ints, not bools) because a bad value here
-    corrupts every future ``allow`` decision.
+    pre-call guess. Validation is strict — ``usd`` finite and ≥ 0; token counts any
+    ``numbers.Integral`` (numpy ints included) but never bools — because a bad value here
+    corrupts every future ``allow`` decision. Token counts are coerced to plain ``int`` before
+    touching the ledger so a numpy scalar can never reach ``json.dump``.
 
     In dev mode a corrupt ledger is replaced with a fresh one (with a warning). In public mode we
     raise ``LedgerCorruptError`` instead: overwriting would reset the spend history and re-open a
@@ -364,8 +379,8 @@ def charge(usd: float, *, model: str, tokens_in: int, tokens_out: int) -> None:
         raise ValueError(f"usd must be finite and >= 0, got {usd!r}")
     if not isinstance(model, str) or not model:
         raise ValueError(f"model must be a non-empty string, got {model!r}")
-    _check_token_count("tokens_in", tokens_in)
-    _check_token_count("tokens_out", tokens_out)
+    tokens_in = _check_token_count("tokens_in", tokens_in)
+    tokens_out = _check_token_count("tokens_out", tokens_out)
 
     path = _ledger_path()
     with _locked(path):

@@ -25,16 +25,41 @@ from quantforge.data.loader import END, SPLITS, START, UNIVERSE, get_split_bound
 # universe & dates"). Restated here on purpose: the test must fail if the module list
 # drifts from the doc, so it cannot just re-import the thing it checks.
 _DOC_UNIVERSE = [
-    "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "CRM", "ADBE", "ORCL", "AVGO",
-    "TSM", "ASML", "SAP", "TM", "NVO", "SONY",
-    "JPM", "GS", "V",
-    "JNJ", "UNH", "PFE",
-    "PG", "KO", "MCD", "WMT", "HD",
-    "XOM", "CVX", "CAT",
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "CRM",
+    "ADBE",
+    "ORCL",
+    "AVGO",
+    "TSM",
+    "ASML",
+    "SAP",
+    "TM",
+    "NVO",
+    "SONY",
+    "JPM",
+    "GS",
+    "V",
+    "JNJ",
+    "UNH",
+    "PFE",
+    "PG",
+    "KO",
+    "MCD",
+    "WMT",
+    "HD",
+    "XOM",
+    "CVX",
+    "CAT",
 ]
 
 
 # ---------------------------------------------------------------- universe
+
 
 def test_universe_matches_doc_list_exactly():
     assert UNIVERSE == _DOC_UNIVERSE
@@ -54,6 +79,7 @@ def test_universe_excludes_direct_foreign_listings():
 
 
 # ---------------------------------------------------------------- dates & splits
+
 
 def test_start_end_exact_fixed_strings():
     assert START == "2010-01-01"
@@ -88,7 +114,7 @@ def test_splits_chronological_contiguous_and_span_start_end():
 
     one_day = dt.timedelta(days=1)
     assert d(val[0]) - d(train[1]) == one_day  # 2019-12-31 -> 2020-01-01
-    assert d(hold[0]) - d(val[1]) == one_day   # 2022-12-31 -> 2023-01-01
+    assert d(hold[0]) - d(val[1]) == one_day  # 2022-12-31 -> 2023-01-01
 
     assert train[0] == START
     assert hold[1] == END
@@ -102,14 +128,16 @@ def test_get_split_bounds_is_the_single_source_of_truth():
 
 # ---------------------------------------------------------------- docstring rigor (RG-3)
 
+
 def test_module_docstring_keeps_bias_caveats():
     doc = loader.__doc__ or ""
     assert "SURVIVORSHIP" in doc.upper()
-    assert "META" in doc          # post-2010 IPOs enter when data begins
-    assert "ADR" in doc.upper()   # direct foreign listings excluded in favor of ADRs
+    assert "META" in doc  # post-2010 IPOs enter when data begins
+    assert "ADR" in doc.upper()  # direct foreign listings excluded in favor of ADRs
 
 
 # ---------------------------------------------------------------- loader stays offline
+
 
 def test_load_prices_cache_miss_fails_fast_without_yfinance(monkeypatch, tmp_path):
     """Offline guarantee (successor to the week-1 stub check): the cache-miss branch is the

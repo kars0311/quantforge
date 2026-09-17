@@ -25,10 +25,10 @@ data/processed/
 output/
 *.parquet
 !tests/fixtures/*.parquet
-data_cache/ai_ledger.json
-data_cache/ai_ledger.json.lock
-data_cache/ai_rate_limits.json
-data_cache/ai_rate_limits.json.lock
+# AI spend ledger + rate-limit state and every sidecar budget.py / guardrails.py may leave beside
+# them: `.lock` (flock), `.corrupt` (quarantined ledger), `.<rand>.tmp` (mkstemp atomic-write temp).
+data_cache/ai_ledger.json*
+data_cache/ai_rate_limits.json*
 
 # ── Streamlit ──
 .streamlit/secrets.toml

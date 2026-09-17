@@ -12,8 +12,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-ANN = 252          # trading days/year
-RISK_FREE = 0.0    # simplification; document if you change it
+ANN = 252  # trading days/year
+RISK_FREE = 0.0  # simplification; document if you change it
 
 _KEYS = ["total_return", "cagr", "ann_vol", "sharpe", "max_drawdown", "hit_rate"]
 

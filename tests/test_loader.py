@@ -122,6 +122,7 @@ def _canned_download() -> pd.DataFrame:
 
 # ---------------------------------------------------------------- cache HIT: pure offline
 
+
 def test_cache_hit_never_imports_yfinance_and_validates(seeded_cache, no_yfinance):
     """The done-when core: with a seeded cache, load_prices works with yfinance unimportable."""
     out = load_prices(cache_dir=str(seeded_cache))
@@ -131,8 +132,7 @@ def test_cache_hit_never_imports_yfinance_and_validates(seeded_cache, no_yfinanc
 
 
 def test_cache_hit_subset_sliced_from_single_file(seeded_cache, no_yfinance):
-    out = load_prices(["AAPL"], start="2015-01-01", end="2015-12-31",
-                      cache_dir=str(seeded_cache))
+    out = load_prices(["AAPL"], start="2015-01-01", end="2015-12-31", cache_dir=str(seeded_cache))
     interchange.validate_frame(out, "prices")
     assert set(out["ticker"]) == {"AAPL"}
     assert out["date"].min() >= pd.Timestamp("2015-01-01", tz="UTC")
@@ -159,8 +159,7 @@ def test_no_silent_refetch_cache_is_authoritative(tmp_path, no_yfinance):
     df.loc[df.index[0], "close"] = 123456789.0
     interchange.write_frame(df, str(tmp_path / "prices.parquet"), "prices")
 
-    out = load_prices(["AAPL"], start="2014-06-02", end="2014-06-02",
-                      cache_dir=str(tmp_path))
+    out = load_prices(["AAPL"], start="2014-06-02", end="2014-06-02", cache_dir=str(tmp_path))
     assert list(out["close"]) == [123456789.0]
 
 
@@ -177,6 +176,7 @@ def test_malformed_cache_fails_loudly_not_refetched(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------- cache MISS: one download
+
 
 def test_cache_miss_downloads_full_universe_once_and_writes_valid_parquet(tmp_path, monkeypatch):
     calls = _fake_yfinance(monkeypatch, _canned_download())
@@ -223,8 +223,9 @@ def test_cache_miss_normalization_hand_computed(tmp_path, monkeypatch):
     # Only the Close field survived — the junk (x1000) values from other fields never leak in.
     assert out["close"].max() < 1000.0
     # Spot-check one exact value against the canned input.
-    aapl_first = out[(out["ticker"] == "AAPL")
-                     & (out["date"] == pd.Timestamp("2012-05-16", tz="UTC"))]
+    aapl_first = out[
+        (out["ticker"] == "AAPL") & (out["date"] == pd.Timestamp("2012-05-16", tz="UTC"))
+    ]
     assert list(aapl_first["close"]) == [20.0]
 
 
@@ -256,6 +257,7 @@ def test_miss_request_subset_still_caches_whole_download(tmp_path, monkeypatch):
 
 # ---------------------------------------------------------------- split bounds sane (RG-4)
 
+
 def test_split_bounds_sane():
     """RG-4: three named splits, chronological, non-overlapping, jointly spanning START..END.
 
@@ -283,6 +285,7 @@ def test_split_bounds_sane():
 
 
 # ---------------------------------------------------------------- constants sanity
+
 
 def test_universe_constants_sanity():
     """The frozen universe is ~28-30 unique upper-case US-listed tickers (FR-1)."""

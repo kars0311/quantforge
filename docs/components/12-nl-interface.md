@@ -23,9 +23,12 @@ SYSTEM_PARSE / SYSTEM_EXPLAIN: str  # frozen (no timestamps/ids) so the cached p
 
 def handle(query: str, *, session_key: str = "anon", client=None) -> dict
     # The one public entry point (UI calls this).
-    # Flow: rate_limit(session_key) -> budget.allow(2 * estimate) -> parse (charged) ->
-    #       assert_no_codegen(raw plan) -> validate_params -> load_data -> run_backtest ->
-    #       get_metrics -> explain (charged) -> return.
+    # Flow: query shape (str? non-blank? <= 2000 chars) -> rate_limit(session_key) ->
+    #       budget.allow(2 * estimate) -> parse (charged) -> assert_no_codegen(raw plan) ->
+    #       validate_params -> load_data -> run_backtest -> get_metrics -> explain (charged) ->
+    #       return. A non-str query raises ValueError; an empty/whitespace/over-long one returns
+    #       a clarification (fallback None, spend 0.0) BEFORE the rate limit, so it records no
+    #       slot and reads no ledger.
     # Returns EXACTLY: {"plan": dict | None, "metrics": dict | None, "explanation": str,
     #                   "spend_usd": float, "fallback": str | None}
     # Any closed gate -> no model call, spend_usd 0.0; "fallback" names the reason so the UI
@@ -70,6 +73,13 @@ def _call(client, *, system, messages, tools=None, tool_choice=None, max_tokens)
 - The stub's `public_mode` parameter is dropped: PUBLIC_MODE comes from the environment via
   guardrails, so a caller can't accidentally (or maliciously) disable it.
 
+- Gate order in `handle` is query validation → rate limit → budget → parse → PUBLIC_MODE gate →
+  tools → explain. Query validation sits *before* the rate limit (2026-09-12 fix): previously
+  an empty or >2000-char query consumed a rate-limit slot and read the ledger before
+  `_validate_query` raised. It is now a clarification-style result for `handle` (a blank submit
+  is an ordinary user action, not a caller bug); `parse`/`parse_with_spend` still raise
+  `ValueError` for the same inputs. `_raw_plan` likewise returns a clarification when the model
+  fills `tickers` with a non-list (a str would `list()` into characters, a dict into keys).
 - The PUBLIC_MODE gate (`guardrails.assert_no_codegen`) inspects the model's **raw** plan before
   `validate_params` normalizes it. If validation ran first, a plan carrying a `code` key would
   surface as a polite clarification and the `public_mode` fallback (an abuse signal, not a typo)

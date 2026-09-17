@@ -21,3 +21,4 @@ mcp                # Model Context Protocol server/tools
 pytest
 ruff               # lint (matches CI)
 python-dotenv
+jsonschema         # tests/test_mcp_server.py imports it directly; otherwise only a transitive dep of `mcp`

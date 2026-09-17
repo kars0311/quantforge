@@ -49,6 +49,12 @@ functions validate against (``loader.UNIVERSE``, ``STRATEGIES``, ``PARAM_WHITELI
 order is fixed and every enum is sorted because this list is also the cached prompt prefix for
 the NL interface (AR-6): a byte that moves between calls is a cache miss.
 
+The schemas are deliberately plain: no ``oneOf``/``anyOf`` combinators, only
+``additionalProperties: false`` objects with typed, enum-bounded properties. That is why
+``optimize_portfolio``'s exactly-one-of ``{result_ids, dataset_id}`` rule is stated in the tool
+and property *descriptions* rather than encoded as ``oneOf`` — the function body enforces it
+with a ValueError, and the model is told the rule in prose it can act on.
+
 ``build_server()`` wraps the same four functions in a ``FastMCP`` server for discovery over the
 protocol. The in-process callers (agent, NL interface, Streamlit) keep calling the plain functions;
 the server exists for external MCP clients. To point Claude Desktop (or any MCP client) at the
@@ -275,11 +281,20 @@ def run_backtest(
 ) -> dict:
     """Run a vetted strategy on a loaded dataset; return a result handle plus its metrics.
 
-    Validation order is deliberate: the dataset handle first (nothing else matters if it is
-    unknown), then the PUBLIC_MODE parameter-only gate (``guardrails.assert_no_codegen`` — a
-    no-op outside public mode), then the whitelist (``validate_params``, whose messages are
-    passed through verbatim so the agent can self-correct on the exact param), then the engine
-    name and the cost bound. Only then does anything compute.
+    Validation order is deliberate and matches the body line for line: (1) the dataset handle
+    via ``_get_dataset`` (an unknown id is a ValueError — nothing else matters if there is no
+    data); (2) ``params`` is defaulted to ``{}`` and must then be a dict, else ValueError;
+    (3) ``strategy`` must be a str, else ValueError; (4) the PUBLIC_MODE parameter-only gate,
+    ``guardrails.assert_no_codegen({strategy, params})`` (a no-op outside public mode);
+    (5) the whitelist, ``validate_params``, whose messages are passed through verbatim so the
+    agent can self-correct on the exact param; (6) the engine name against ``ENGINES``;
+    (7) ``_validate_cost_bps``. Only then does anything compute.
+
+    Steps 2 and 3 run BEFORE the gate on purpose: a non-dict ``params`` or a non-str
+    ``strategy`` is a malformed call, not a code-execution attempt, so it is rejected as a plain
+    ValueError and in PUBLIC_MODE those two shapes never surface as ``PublicModeViolation``.
+    The gate then sees exactly the ``{str, dict}`` payload it is written to inspect, which is
+    why its own type checks and this function's cannot disagree.
 
     The pipeline is the same one ``app/streamlit_app.py`` runs: ``generate_signals`` (weights as
     of each close) then ``Engine.run_backtest`` (which applies the one-day execution lag and the
@@ -569,11 +584,17 @@ def _build_tool_schemas() -> list[dict]:
                         "items": {"type": "string"},
                         "minItems": 2,
                         "uniqueItems": True,
-                        "description": "Handles returned by run_backtest (at least two, unique).",
+                        "description": (
+                            "Handles returned by run_backtest (at least two, unique). Mutually "
+                            "exclusive with dataset_id: pass exactly one of the two."
+                        ),
                     },
                     "dataset_id": {
                         "type": "string",
-                        "description": "Handle returned by load_data (needs >= 2 tickers).",
+                        "description": (
+                            "Handle returned by load_data (needs >= 2 tickers). Mutually "
+                            "exclusive with result_ids: pass exactly one of the two."
+                        ),
                     },
                     "objective": {
                         "type": "string",

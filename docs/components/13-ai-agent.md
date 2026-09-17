@@ -95,6 +95,18 @@ should show it.
   so neither a caller nor a prompt-injected goal can switch the parameter-only gate off.
 - **Model:** `claude-sonnet-5` (AR-6; a `budget.PRICES_PER_MTOK` key). Every call is
   `estimate → allow → create → charge` inside the module's single `_call`.
+- **Forced `tool_choice` with adaptive thinking (handoff fix, 2026-09-12):** the request sends
+  `tool_choice: {"type": "any", "disable_parallel_tool_use": true}` and NO `thinking` key.
+  Verified against the `claude-api` skill (`shared/model-migration.md`): on the Claude API a
+  forced `tool_choice` is compatible with Sonnet 5's default-on adaptive thinking — only Amazon
+  Bedrock requires `thinking: {type: "disabled"}` next to it, and forced `any`/`tool` returns
+  400 only on `claude-fable-5-1`/`claude-mythos-5-1`. So the request shape was left unchanged
+  and pinned (`tests/test_handoff_open_items.py`: exact request keys, no `thinking`, the model
+  id is not a Fable/Mythos 5.1 id).
+- **Holdout cost is not the loop's cost:** the holdout is always scored at
+  `guardrails._HOLDOUT_COST_BPS` (10 bps) regardless of the `cost_bps` the loop used — a
+  caller who could lower the cost for the final score alone would hold a knob that only ever
+  flatters it. Pinned by a spy on `mcp_server.ENGINES["python"].run_backtest`.
 
 ## Done when
 

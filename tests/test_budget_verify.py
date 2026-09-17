@@ -271,9 +271,10 @@ def test_config_files_document_the_new_env_vars():
     env_example = (REPO_ROOT / ".env.example").read_text()
     assert "AI_DISABLED=off" in env_example
     assert "AI_LEDGER_PATH=data_cache/ai_ledger.json" in env_example
+    # Since 2026-09-12 the ignore is a prefix glob (`ai_ledger.json*`) so the ledger, its `.lock`,
+    # a `.corrupt` quarantine and the mkstemp `.<rand>.tmp` are all covered by one line.
     gitignore = (REPO_ROOT / ".gitignore").read_text()
-    for line in ("data_cache/ai_ledger.json", "data_cache/ai_ledger.json.lock"):
-        assert line in gitignore.splitlines()
+    assert "data_cache/ai_ledger.json*" in gitignore.splitlines()
 
 
 # ---------------------------------------------------------------- tampered-ledger integrity

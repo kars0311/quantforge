@@ -27,9 +27,7 @@ _NON_PANEL_KINDS = ["returns", "metrics", "weights", "frontier"]
 def _utc_ns_dates(n: int = 3) -> pd.Series:
     # Pin to ns explicitly: the contract's canonical date dtype is timestamp[ns] UTC, and under
     # pandas 3.x a naturally-built date column defaults to 'us' resolution.
-    return pd.Series(pd.date_range("2024-01-02", periods=n, tz="UTC")).astype(
-        "datetime64[ns, UTC]"
-    )
+    return pd.Series(pd.date_range("2024-01-02", periods=n, tz="UTC")).astype("datetime64[ns, UTC]")
 
 
 def _good_frame(kind: str) -> pd.DataFrame:
@@ -178,9 +176,7 @@ def test_read_frame_extra_column_in_file_rejected(tmp_path):
 def test_read_pandas_file_with_named_index_rejected(tmp_path):
     # A named index materializes as a physical extra column in Parquet — the contract is
     # columns-only, so this must be rejected at the boundary, not silently absorbed.
-    df = pd.DataFrame(
-        {"ticker": ["AAPL"], "weight": [1.0]}, index=pd.Index([7], name="rowid")
-    )
+    df = pd.DataFrame({"ticker": ["AAPL"], "weight": [1.0]}, index=pd.Index([7], name="rowid"))
     path = str(tmp_path / "named_idx.parquet")
     df.to_parquet(path)
     with pytest.raises(SchemaError):

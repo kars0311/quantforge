@@ -8,7 +8,8 @@ Independently proves the closeout's deliverables so none can silently regress:
 
 - docs/TEN_WEEK_PLAN.md: all three Week-7 boxes ticked and named; exactly 24 ticked overall
   (4+3+3+2+3+3+3+3, Weeks 1-8); Weeks 9-10 + Stretch untouched.
-- handoff.md: the newest entry is the 2026-09-11 Week-8 one (names ai/agent.py, run_research,
+- handoff.md: the newest entry is the 2026-09-12 open-items fix-run one; directly below it is
+  the 2026-09-11 Week-8 entry (names ai/agent.py, run_research,
   the three proof suites, its exact gate counts, the 919/1 week-7 baseline, the uncommitted /
   approval note, and Week 9 as next); the 2026-09-10 Week-7 entry sits intact below it with its
   exact gate counts (879 passed / 1 skipped), the 488/2 baseline, ruff clean, "Agent failures",
@@ -182,24 +183,30 @@ def _week7_entry() -> str:
     return next(b for d, b in _handoff_entries() if d == "2026-09-10" and "Week 7" in b)
 
 
-def test_handoff_newest_entry_is_week8_dated_2026_09_11_and_dates_descend():
-    # Pin advanced at the week-8 closeout: the newest entry is the Week-8 one; the Week-7 entry
-    # is directly below it, still starting with its original heading.
+def test_handoff_week8_entry_is_second_below_the_2026_09_12_fix_entry_and_dates_descend():
+    # Pin advanced at the 2026-09-12 fix run: the newest entry is that run's open-items entry;
+    # the Week-8 entry sits directly below it and the Week-7 entry directly below that, each
+    # still starting with its original heading.
     entries = _handoff_entries()
     assert entries, "handoff.md has no dated entries"
     date, body = entries[0]
-    assert date == "2026-09-11"
-    assert "Week 8" in body
-    assert body.lstrip().startswith("## 2026-09-11 — Week 8 complete")
-    assert entries[1][0] == "2026-09-10"
+    assert date == "2026-09-12"
+    assert "open-items" in body.splitlines()[0]
+    assert entries[1][0] == "2026-09-11"
+    assert "Week 8" in entries[1][1]
+    assert entries[1][1].lstrip().startswith("## 2026-09-11 — Week 8 complete")
+    assert entries[2][0] == "2026-09-10"
     # A stale "Week 8 next" line from the week-7 entry must not be mistaken for the new entry.
-    assert entries[1][1].lstrip().startswith("## 2026-09-10 — Week 7 complete")
+    assert entries[2][1].lstrip().startswith("## 2026-09-10 — Week 7 complete")
     dates = [d for d, _ in entries]
     assert dates == sorted(dates, reverse=True), "handoff entries are not newest-first"
 
 
 def test_handoff_week8_entry_gate_counts_modules_suites_open_items_and_next_target():
-    body = _handoff_entries()[0][1]
+    # Pin advanced at the 2026-09-12 fix run: the Week-8 entry is read by date, not as [0].
+    # Every needle below is historical text of THAT entry ("uncommitted" included — Week 8 was
+    # committed afterwards as 74af8d9, which the 2026-09-12 entry records).
+    body = next(b for d, b in _handoff_entries() if d == "2026-09-11" and "Week 8" in b)
     # Exact counts the closeout run produced (the spec: recorded verbatim), and the week-7
     # baseline it started from.
     assert "1186 passed / 2 skipped" in body
@@ -263,14 +270,17 @@ def test_handoff_week7_entry_names_modules_open_items_and_next_target():
 
 def test_handoff_week7_week6_and_week5_entries_preserved_below():
     # Prepending must not rewrite history: the week-7, week-6 and week-5 records keep their
-    # counts, in order, directly below the week-8 entry.
+    # counts, in order, directly below the week-8 entry. Pin advanced at the 2026-09-12 fix
+    # run: positions are relative to the week-8 entry's index, not absolute.
     entries = _handoff_entries()
-    assert entries[1][0] == "2026-09-10" and "Week 7" in entries[1][1]
-    assert "919 passed / 1 skipped" in entries[1][1]
-    assert entries[2][0] == "2026-09-01" and "Week 6" in entries[2][1]
-    assert "488 passed / 2 skipped" in entries[2][1]
+    idx8 = next(i for i, (d, b) in enumerate(entries) if d == "2026-09-11" and "Week 8" in b)
+    idx7, idx6 = idx8 + 1, idx8 + 2
+    assert entries[idx7][0] == "2026-09-10" and "Week 7" in entries[idx7][1]
+    assert "919 passed / 1 skipped" in entries[idx7][1]
+    assert entries[idx6][0] == "2026-09-01" and "Week 6" in entries[idx6][1]
+    assert "488 passed / 2 skipped" in entries[idx6][1]
     idx5 = next(i for i, (d, b) in enumerate(entries) if d == "2026-08-31" and "Week 5" in b)
-    assert idx5 > 2
+    assert idx5 > idx6
     assert "428 passed / 2 skipped" in entries[idx5][1]
 
 
@@ -308,9 +318,11 @@ def test_env_example_documents_dev_defaults_and_public_mode_fail_closed():
     assert re.search(r"2 \(daily\) / 10 \(total\)", _ENV_EXAMPLE)
     assert "PUBLIC_MODE=on" in _ENV_EXAMPLE and "denies EVERY call" in _ENV_EXAMPLE
     assert "AI_LEDGER_PATH" in _ENV_EXAMPLE and "ai_rate_limits.json" in _ENV_EXAMPLE
-    # Existing values kept (the spec: "keep existing values").
+    # The example values now EQUAL the in-code dev defaults (aligned 2026-09-12 — the file used to
+    # say 5 / 25 while the comment block, the docs table and budget.py all said 2 / 10).
     values = _env_example_vars()
-    assert values["AI_BUDGET_USD_DAILY"] == "5" and values["AI_BUDGET_USD_TOTAL"] == "25"
+    assert values["AI_BUDGET_USD_DAILY"] == str(int(budget._DEV_DEFAULT_DAILY_USD)) == "2"
+    assert values["AI_BUDGET_USD_TOTAL"] == str(int(budget._DEV_DEFAULT_TOTAL_USD)) == "10"
     assert values["PUBLIC_MODE"] == "off" and values["AI_DISABLED"] == "off"
     assert values["DEMO_PASSCODE"] == ""  # blank placeholder, never a real passcode
 

@@ -79,7 +79,11 @@ def assert_no_codegen(action: dict) -> None
   holdout is still an attempt.
 - **`HoldoutHandle` is metadata-only from the outside**: `__slots__` (no `__dict__`), a repr
   that shows only start/end/n_days/consumed, no container dunders, and pickling/deepcopy
-  refused with `TypeError` so the slice cannot be smuggled out by serialization.
+  refused with `TypeError` so the slice cannot be smuggled out by serialization. The closure is
+  a guard against accidental or tool-mediated access (an agent, a tool result, a debugger repr,
+  a pickle), not against deliberate in-process introspection of the closure cell by code already
+  running in this process — the structural guarantee is the MCP `load_data` rejection, proven
+  in `tests/test_holdout_isolation.py`.
 - **`assert_no_codegen` requires the exact key set `{strategy, params}`** in PUBLIC_MODE, with
   flat scalar param values; `code`/`source`/`python`/`eval`/`exec`/`file` keys fall out of
   that rule rather than a blocklist that could be evaded by renaming.

@@ -20,7 +20,7 @@ Results pass by opaque handle, so tool outputs stay small and the agent never ho
 | tool | inputs | validation | output |
 |------|--------|-----------|--------|
 | `load_data` | `tickers?: list[str], start: str, end: str` | tickers ⊆ UNIVERSE; dates ISO; **both dates must lie inside train+val bounds** (holdout dates rejected, never truncated — SF-8) | `{dataset_id, tickers, start, end, n_days}` |
-| `run_backtest` | `dataset_id, strategy: str, params: dict, engine: str = "python", cost_bps: float = 10` | known dataset_id; `strategies.validate_params`; engine ∈ ENGINES; cost_bps ∈ [0, 100] | `{result_id, metrics}` |
+| `run_backtest` | `dataset_id, strategy: str, params: dict, engine: str = "python", cost_bps: float = 10` | in order: known dataset_id → params is a dict (default `{}`) → strategy is a str → `assert_no_codegen` (PUBLIC_MODE only) → `strategies.validate_params` → engine ∈ ENGINES → cost_bps ∈ [0, 100]; a non-dict params / non-str strategy is a plain ValueError before the gate | `{result_id, metrics}` |
 | `optimize_portfolio` | `result_ids: list[str] \| dataset_id, objective?: str` | exactly one selector; known ids; objective ∈ {max_sharpe, min_volatility} | `{weights, frontier: [{risk, ret}, …]}` |
 | `get_metrics` | `result_id` | known id | `{metrics}` (the `_KEYS` dict) |
 
@@ -93,6 +93,19 @@ _price_source: Callable[[], pd.DataFrame]               # monkeypatch seam; defa
 - **Strict schemas overwrite FastMCP's signature-derived ones** in `build_server` (the
   module's one private-attribute access, pinned by a drift-guard test) so the advertised
   `input_schema` is the same object the NL interface caches as its prompt prefix (AR-6).
+- **The parameter-only gate runs in `run_backtest` only** — the other three tools have no
+  `{strategy, params}` payload to inspect (`assert_no_codegen` requires exactly that key set;
+  `load_data`/`optimize_portfolio`/`get_metrics` take enums, ISO dates and opaque handles, and
+  their own validation is the equivalent gate); `test_public_mode_no_codegen.py` proves the
+  gate at the tool level. Inside `run_backtest` a non-dict `params` / non-str `strategy` is
+  rejected as a plain ValueError *before* the gate, so those shapes never surface as
+  `PublicModeViolation` (order pinned by `test_handoff_open_items.py`).
+- **`optimize_portfolio`'s exactly-one-of selector rule lives in descriptions, not `oneOf`.**
+  The strict schemas deliberately use no JSON-Schema combinators (plain
+  `additionalProperties: false` objects with sorted enums, so the cached prompt prefix stays
+  byte-stable and easy to validate), so the tool description and both the `result_ids` and
+  `dataset_id` property descriptions say "pass exactly one of the two"; the function body
+  enforces it with a ValueError.
 
 ## Done when
 

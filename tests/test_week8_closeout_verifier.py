@@ -9,11 +9,15 @@ history, or a hand-built input — never against the builder's own summary.
 - docs/TEN_WEEK_PLAN.md: exactly 24 `- [x]` lines at line start (the spec's own `grep -c`), the
   three Week-8 lines ticked and named, Week 9 / Week 10 / Stretch all `- [ ]`, and no alternate
   checkbox spelling (`[X]`, `* [x]`) that a count of `- [x]` would miss.
-- handoff.md: the first dated entry is 2026-09-11, names everything the spec listed, records the
-  suite counts verbatim, and — the adversarial part — the Week-7, Week-6 and Week-5 entries are
+- handoff.md: the 2026-09-11 Week-8 entry (looked up by date + content since the 2026-09-12
+  open-items fix run prepended on top of it) names everything the spec listed, records the
+  suite counts verbatim, and — the adversarial part — every entry below the newest one is
   byte-identical to the committed `HEAD:handoff.md` (prepending must not rewrite history). The
   per-suite growth numbers the entry quotes (`test_agent.py` 98, holdout 15, public-mode 30) are
   checked against a real `pytest --collect-only` of those files.
+  Pins advanced at the 2026-09-12 fix run: HEAD (`74af8d9`, "week 8 complete") now carries the
+  Week-8 entry itself, so the byte-identity check expects HEAD's first entry to be 2026-09-11
+  and the working copy's first entry to be the 2026-09-12 fix-run entry.
 - docs/components/13-ai-agent.md may not overclaim: the Interface block's signature is
   `inspect.signature(run_research)`, the history-record and result keys it lists are the
   module's tuples AND the keys real records carry after a mocked run, the `stopped_because`
@@ -38,6 +42,7 @@ from __future__ import annotations
 import inspect
 import math
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -93,12 +98,34 @@ def _entries(text: str) -> list[tuple[str, str]]:
     return out
 
 
+def _baseline_ref() -> str | None:
+    """The commit this fix run was built on top of ("week 8 complete", 74af8d9), found by
+    message rather than pinned as HEAD: these pins compare the working tree against the state
+    BEFORE the fix run, and must keep holding after the run itself is committed (HEAD moves;
+    the baseline does not)."""
+    if not (_ROOT / ".git").exists() or shutil.which("git") is None:
+        return None
+    proc = subprocess.run(
+        ["git", "log", "--format=%H", "--grep=^week 8 complete", "-1"],
+        cwd=_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    sha = proc.stdout.strip()
+    return sha or None
+
+
 def _git_show(rel: str) -> str | None:
     """The committed (HEAD) version of a file, or None when git is unavailable."""
     if not (_ROOT / ".git").exists():
         return None
     proc = subprocess.run(
-        ["git", "show", f"HEAD:{rel}"], cwd=_ROOT, capture_output=True, text=True, check=False
+        ["git", "show", f"{_baseline_ref()}:{rel}"],
+        cwd=_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     return proc.stdout if proc.returncode == 0 else None
 
@@ -257,9 +284,12 @@ def test_plan_week8_three_lines_ticked_and_named_weeks_9_10_stretch_untouched():
 
 
 def test_handoff_first_entry_is_week8_2026_09_11_and_names_the_spec_items():
+    # Pin advanced at the 2026-09-12 fix run: that run prepended its own entry, so the Week-8
+    # entry is looked up by date + content rather than taken as entries[0]. Every needle below
+    # is unchanged; the "Week-7 entry is the very next one" pin now keys off the Week-8 index.
     entries = _entries(_HANDOFF)
-    date, body = entries[0]
-    assert date == "2026-09-11"
+    date, body = next((d, b) for d, b in entries if d == "2026-09-11" and "Week 8" in b)
+    idx8 = entries.index((date, body))
     assert body.startswith("## 2026-09-11 — Week 8 complete: AI research agent")
     for needle in (
         "ai/agent.py",
@@ -284,24 +314,31 @@ def test_handoff_first_entry_is_week8_2026_09_11_and_names_the_spec_items():
     assert re.search(r"ruff check \.` clean", body)
     assert re.search(r"pending Kent's approval", body)
     assert re.search(r"Research (tab|mode)", body)
-    # Dates descend, and the Week-7 entry is the very next one.
+    # Dates descend, and the Week-7 entry is the very next one after the Week-8 entry.
     assert [d for d, _ in entries] == sorted((d for d, _ in entries), reverse=True)
-    assert entries[1][0] == "2026-09-10" and entries[1][1].startswith("## 2026-09-10 — Week 7")
+    date7, body7 = entries[idx8 + 1]
+    assert date7 == "2026-09-10" and body7.startswith("## 2026-09-10 — Week 7")
 
 
 def test_handoff_prepend_left_every_earlier_entry_byte_identical_to_head():
     # "Intact" means intact: the committed handoff's entries must reappear unchanged below the
     # new one — not re-flowed, not re-counted, not trimmed.
+    # Pin advanced at the 2026-09-12 fix run: Week 8 was committed as 74af8d9, so HEAD's first
+    # entry is now the 2026-09-11 one and the working copy's first entry is the fix-run entry.
+    # Every entry below it must still equal HEAD's, byte for byte.
     committed = _git_show("handoff.md")
     if committed is None:
         pytest.skip("git or the committed handoff.md is unavailable")
     old = _entries(committed)
     new = _entries(_HANDOFF)
     assert old, "committed handoff has no dated entries"
-    assert new[0][0] == "2026-09-11" and old[0][0] != "2026-09-11"
+    assert old[0][0] == "2026-09-11" and "Week 8" in old[0][1]
+    assert new[0][0] == "2026-09-12" and "open-items" in new[0][1]
     assert [b for _, b in new[1:]] == [b for _, b in old], "an earlier handoff entry was edited"
-    assert "919 passed / 1 skipped" in new[1][1] and "879 passed / 1 skipped" in new[1][1]
-    assert "488 passed / 2 skipped" in new[2][1] and new[2][0] == "2026-09-01"
+    assert new[1][0] == "2026-09-11" and "1186 passed / 2 skipped" in new[1][1]
+    assert "919 passed / 1 skipped" in new[2][1] and "879 passed / 1 skipped" in new[2][1]
+    assert new[2][0] == "2026-09-10"
+    assert "488 passed / 2 skipped" in new[3][1] and new[3][0] == "2026-09-01"
 
 
 def _collected_counts(*rel_files: str) -> dict[str, int]:
@@ -312,6 +349,7 @@ def _collected_counts(*rel_files: str) -> dict[str, int]:
             "-m",
             "pytest",
             "--collect-only",
+            "--color=no",  # FORCE_COLOR in a caller's shell would ANSI-wrap the summary line
             "-qq",
             "-p",
             "no:cacheprovider",
@@ -333,7 +371,9 @@ def _collected_counts(*rel_files: str) -> dict[str, int]:
 def test_handoff_per_suite_growth_numbers_match_a_real_collection():
     # The entry quotes how many tests each week-8 suite has; a number typed from memory (the
     # builder's first draft said 27 -> 31 for the public-mode suite; it is 26 -> 30) fails here.
-    body = " ".join(_entries(_HANDOFF)[0][1].split())  # the markdown wraps mid-parenthesis
+    # Pin advanced at the 2026-09-12 fix run: the Week-8 entry is read by date, not as [0].
+    week8 = next(b for d, b in _entries(_HANDOFF) if d == "2026-09-11" and "Week 8" in b)
+    body = " ".join(week8.split())  # the markdown wraps mid-parenthesis
     counts = _collected_counts(
         "tests/test_agent.py",
         "tests/test_holdout_isolation.py",
@@ -623,4 +663,15 @@ def test_agent_reads_no_env_var_and_env_example_is_unchanged():
     committed = _git_show(".env.example")
     if committed is None:
         pytest.skip("git or the committed .env.example is unavailable")
-    assert committed == _ENV_EXAMPLE, ".env.example changed in a docs-only milestone"
+    # Week 8 left .env.example byte-identical to HEAD. The 2026-09-12 open-items fix run then
+    # re-pointed the two example cap values at the dev defaults (5/25 -> 2/10), so the pin is
+    # retargeted: the VARIABLE SET must still equal HEAD's (nothing added or removed), and the
+    # only values allowed to differ from HEAD are the two budget caps.
+    pattern = re.compile(r"^([A-Z_]+)=(.*)$", flags=re.M)
+    head_vars = dict(pattern.findall(committed))
+    now_vars = dict(pattern.findall(_ENV_EXAMPLE))
+    assert set(now_vars) == set(head_vars), "variable added/removed in .env.example"
+    changed = {k for k in head_vars if head_vars[k] != now_vars[k]}
+    assert changed <= {"AI_BUDGET_USD_DAILY", "AI_BUDGET_USD_TOTAL"}, (
+        f".env.example values changed beyond the budget caps: {changed}"
+    )
