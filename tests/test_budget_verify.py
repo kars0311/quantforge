@@ -20,6 +20,25 @@ from quantforge.ai import budget
 HAIKU = "claude-haiku-4-5"
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+_REPO_LEDGER_FILES = ("ai_ledger.json", "ai_ledger.json.lock", "ai_rate_limits.json")
+
+
+def _repo_ledger_state() -> dict[str, tuple[int, int] | None]:
+    """``{name: (size, mtime_ns) | None}`` for the real ``data_cache/`` ledger files."""
+    state: dict[str, tuple[int, int] | None] = {}
+    for name in _REPO_LEDGER_FILES:
+        path = REPO_ROOT / "data_cache" / name
+        state[name] = (path.stat().st_size, path.stat().st_mtime_ns) if path.exists() else None
+    return state
+
+
+# Captured at collection time, i.e. before any test in the session runs. The hygiene test below
+# compares against this rather than asserting the files are absent: on a developer's machine a
+# real AI query legitimately writes ``data_cache/ai_ledger.json`` (that is where dev-mode spend
+# is recorded), and a suite that goes red forever after the first real call would just get
+# deleted. What must hold is that the *test run* neither created nor modified these files.
+_REPO_LEDGER_STATE_AT_COLLECTION = _repo_ledger_state()
+
 
 @pytest.fixture
 def ledger(tmp_path, monkeypatch):
@@ -261,10 +280,15 @@ def test_concurrent_allow_and_charge_interleave_safely(ledger):
 
 
 def test_repo_data_cache_never_receives_ledger_files():
-    # Every budget test redirects AI_LEDGER_PATH; if one forgot, these files would appear here
-    # (they are gitignored, so `git status` alone would not reveal the leak).
-    for name in ("ai_ledger.json", "ai_ledger.json.lock", "ai_rate_limits.json"):
-        assert not (REPO_ROOT / "data_cache" / name).exists(), name
+    # Every budget test redirects AI_LEDGER_PATH; if one forgot, these files would be created
+    # or rewritten here (they are gitignored, so `git status` alone would not reveal the leak).
+    # A file that already existed, unchanged, before collection is a developer's real spend
+    # record, not a leak — see ``_REPO_LEDGER_STATE_AT_COLLECTION``.
+    now = _repo_ledger_state()
+    for name in _REPO_LEDGER_FILES:
+        assert now[name] == _REPO_LEDGER_STATE_AT_COLLECTION[name], (
+            f"{name} was created or modified by the test session"
+        )
 
 
 def test_config_files_document_the_new_env_vars():

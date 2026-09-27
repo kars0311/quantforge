@@ -41,6 +41,15 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
+# Local runs keep ANTHROPIC_API_KEY and the AI_BUDGET_USD_* caps in a gitignored repo-root .env
+# (see .env.example). Nothing in the SDK or `quantforge.ai` reads that file, so load it here,
+# once, at the process entry point. `load_dotenv` never overrides variables already set in the
+# environment, so a deployed container (where the task definition injects real env vars and no
+# .env exists) is unaffected — this only closes the gap for `streamlit run` on a laptop.
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(_SRC.parent / ".env")
+
 from quantforge import interchange  # noqa: E402
 from quantforge.data.loader import UNIVERSE, get_split_bounds, load_prices  # noqa: E402
 from quantforge.engine.base import BacktestResult  # noqa: E402
